@@ -23,6 +23,7 @@ import { StatusError } from "./types/cloudflare";
 import { StatusCode } from "hono/utils/http-status";
 import { addTikTokRoutes } from "./routes/tiktok";
 import { addIndexRoutes } from "./routes";
+import { addEmbedRoutes } from "@/routes/embed";
 
 const app = new Hono();
 
@@ -30,6 +31,7 @@ app.use("*", etag(), logger());
 
 // Add routes
 addIndexRoutes(app);
+addEmbedRoutes(app);
 addTikTokRoutes(app);
 
 // Add error handlers

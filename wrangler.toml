@@ -1,4 +1,5 @@
 name = "tiktxk"
 main = "src/index.ts"
+workers_dev = true
 compatibility_date = "2022-09-24"
 account_id = "dd8e8772744b6e34e14fb0b77054ac41"

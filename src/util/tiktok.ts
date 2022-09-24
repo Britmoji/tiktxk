@@ -38,10 +38,29 @@ class TikTokAPI extends APIClient {
 }
 
 export interface ItemDetails {
+  shareMeta: {
+    desc: string;
+    title: string;
+  };
   itemInfo: {
     itemStruct: {
+      id: string;
+      author: {
+        avatarThumb: string;
+        uniqueId: string;
+      };
+      stats: {
+        commentCount: number;
+        diggCount: number;
+        playCount: number;
+        shareCount: number;
+      };
       video: {
         downloadAddr: string;
+        cover: string;
+        format: string;
+        height: number;
+        width: number;
       };
     };
   };
