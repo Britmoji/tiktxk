@@ -169,3 +169,6 @@ dist
 # wrangler project
 
 .dev.vars
+
+# idea
+.idea
