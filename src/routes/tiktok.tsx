@@ -39,7 +39,10 @@ const DiscordEmbed = ({ data }: { data: ItemDetails }) => {
         {/* Site Metadata */}
         <meta property="og:title" content={`❤️ ${likes} 💬 ${comments}`} />
         <meta property="og:site_name" content="TikTxk - Prettier Embeds" />
-        <meta property="theme-color" content="#f48fb1" />
+        <meta
+          property="theme-color"
+          content={Math.random() > 0.5 ? "#69C9D0" : "#EE1D52"}
+        />
 
         {/* Video Metadata */}
         <meta property="og:video" content={video.downloadAddr} />

@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { StatusError } from "../types/cloudflare";
+import { StatusError } from "@/types/cloudflare";
 
 export abstract class APIClient {
   protected constructor(private readonly base: string) {}
