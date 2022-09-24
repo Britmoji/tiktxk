@@ -171,4 +171,5 @@ dist
 .dev.vars
 
 # idea
-.idea
+.idea/*
+!.idea/copyright
