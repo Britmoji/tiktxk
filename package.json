@@ -1,9 +1,9 @@
 {
-  "name": "tiktox",
+  "name": "tiktxk",
   "version": "0.0.1",
   "private": true,
   "description": "An open source, privacy first Cloudflare Worker for generating TikTok video download links.",
-  "license": "GPL-3.0-or-later",
+  "license": "AGPL-3.0-or-later",
   "scripts": {
     "start": "wrangler dev",
     "deploy": "wrangler publish"
