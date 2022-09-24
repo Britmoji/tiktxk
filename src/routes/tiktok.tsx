@@ -112,6 +112,10 @@ export const addTikTokRoutes = (app: Hono) => {
       return render(c, details);
     };
 
+  // https://www.tiktok.com/@username/video/1234567891234567891
+  app.get("/*/video/:videoId", handleUsernameVideo);
+  app.get("/*/video/:videoId/", handleUsernameVideo);
+
   // https://vm.tiktok.com/ZTRav7308/
   app.get("/:vmId", handleRedirect("vmId"));
   app.get("/:vmId/", handleRedirect("vmId"));
@@ -119,8 +123,4 @@ export const addTikTokRoutes = (app: Hono) => {
   // https://www.tiktok.com/t/ZTRav7308
   app.get("/t/:videoId", handleRedirect("videoId"));
   app.get("/t/:videoId/", handleRedirect("videoId"));
-
-  // https://www.tiktok.com/@username/video/1234567891234567891
-  app.get("/:username/video/:videoId", handleUsernameVideo);
-  app.get("/:username/video/:videoId/", handleUsernameVideo);
 };
