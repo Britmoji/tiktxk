@@ -62,6 +62,9 @@ export interface ItemDetails {
         height: number;
         width: number;
       };
+      music: {
+        playUrl: string;
+      };
     };
   };
 }

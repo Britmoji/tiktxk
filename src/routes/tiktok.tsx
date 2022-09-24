@@ -23,8 +23,10 @@ import { StatusError } from "@/types/cloudflare";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { jsx } from "hono/jsx";
 import { formatNumber } from "@/util/numbers";
+import { Constants } from "@/constants";
 
 const DiscordEmbed = ({ data }: { data: ItemDetails }) => {
+  const videoId = data.itemInfo.itemStruct.id;
   const video = data.itemInfo.itemStruct.video;
   const stats = data.itemInfo.itemStruct.stats;
   const author = data.itemInfo.itemStruct.author.uniqueId;
@@ -45,7 +47,10 @@ const DiscordEmbed = ({ data }: { data: ItemDetails }) => {
         />
 
         {/* Video Metadata */}
-        <meta property="og:video" content={video.downloadAddr} />
+        <meta
+          property="og:video"
+          content={`${Constants.HOST_URL}/meta/${videoId}/video`}
+        />
         <meta property="og:video:type" content={`video/${video.format}`} />
         <meta property="og:video:width" content={video.width} />
         <meta property="og:video:height" content={video.height} />
@@ -54,7 +59,7 @@ const DiscordEmbed = ({ data }: { data: ItemDetails }) => {
         {/* The additional oembed is pulled by Discord to enable improved embeds. */}
         <link
           rel="alternate"
-          href={`https://tiktxk.com/internal/embed?username=${author}`}
+          href={`${Constants.HOST_URL}/internal/embed?username=${author}`}
           type="application/json+oembed"
         />
       </head>

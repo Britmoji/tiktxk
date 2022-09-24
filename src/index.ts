@@ -24,6 +24,7 @@ import { StatusCode } from "hono/utils/http-status";
 import { addTikTokRoutes } from "./routes/tiktok";
 import { addIndexRoutes } from "./routes";
 import { addEmbedRoutes } from "@/routes/embed";
+import { addMetaRoutes } from "@/routes/meta";
 
 const app = new Hono();
 
@@ -32,6 +33,7 @@ app.use("*", etag(), logger());
 // Add routes
 addIndexRoutes(app);
 addEmbedRoutes(app);
+addMetaRoutes(app);
 addTikTokRoutes(app);
 
 // Add error handlers
