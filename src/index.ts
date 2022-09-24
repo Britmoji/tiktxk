@@ -25,6 +25,7 @@ import { addTikTokRoutes } from "./routes/tiktok";
 import { addIndexRoutes } from "./routes";
 import { addEmbedRoutes } from "@/routes/embed";
 import { addMetaRoutes } from "@/routes/meta";
+import { Constants } from "./constants";
 
 const app = new Hono();
 
@@ -39,12 +40,9 @@ addTikTokRoutes(app);
 // Add error handlers
 const errorComment =
   `If you're here, and have no idea what this nerd shit is, something went wrong when
-trying to embed a TikTok video. We don't support LIVE videos, and we don't support videos that
-are private, or have been deleted. If you're trying to embed a video that is private, or has
-been deleted, you can't. Sorry! Otherwise, please open an issue on GitHub at https://github.com/britmoji/tiktxk <3`.replace(
-    /\s+/g,
-    " ",
-  );
+trying to embed a TikTok video. We don't support slideshows or LIVE videos, and we can't 
+show videos that are private, or have been deleted. Sorry! Something wrong? 
+Open an issue on GitHub at ${Constants.HOST_URL}/issue <3`.replace(/\s+/g, " ");
 
 app.notFound(() => {
   throw new StatusError(404);
