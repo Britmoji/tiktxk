@@ -16,70 +16,40 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// inshallah this works
-// 🦀 crab in the code
+import { Hono } from "hono";
+import { logger } from "hono/logger";
+import { etag } from "hono/etag";
+import { StatusError } from "./types/cloudflare";
+import { StatusCode } from "hono/utils/http-status";
+import { addTikTokRoutes } from "./routes/tiktok";
+import { addIndexRoutes } from "./routes";
 
-const TT_API = "https://t.tiktok.com/api/item/detail/?itemId=";
-const USER_AGENT =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0";
+const app = new Hono();
 
-async function get(url: string) {
-  // Wrapper for fetch, pretend to be a human.
-  return await fetch(url, {
-    headers: {
-      "User-Agent": USER_AGENT,
-    },
-  });
-}
+app.use("*", etag(), logger());
 
-async function getVideoURL(videoID: string): Promise<string | undefined> {
-  const res = await get(TT_API + videoID);
-  const json: any = await res.json(); // TODO: type
-  let videoURL = undefined;
+// Add routes
+addIndexRoutes(app);
+addTikTokRoutes(app);
 
-  try {
-    videoURL = json?.itemInfo?.itemStruct?.video?.downloadAddr;
-  } catch (e) {
-    /* TODO: Maybe do something here... an image, perhaps? */
+// Add error handlers
+app.notFound(() => {
+  throw new StatusError(404);
+});
+
+app.onError((err, c) => {
+  if (err instanceof StatusError) {
+    c.status(<StatusCode>err.status);
+  } else {
+    console.error(err);
+    c.status(500);
   }
 
-  return videoURL;
-}
+  return c.json({
+    error: err.message,
+    success: false,
+  });
+});
 
-async function idFromTikTokURL(url: string) {
-  const videoID = new URL(url).pathname.split("/").pop();
-  if (!videoID) return undefined;
-
-  return await getVideoURL(videoID);
-}
-
-export default {
-  async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-    // If the URL is like /@username/video/1234567891234567891
-    if (url.pathname.match(/\/@[^/]+\/video\/\d+/)) {
-      const videoURL = await idFromTikTokURL(request.url);
-      if (videoURL) return Response.redirect(videoURL, 302);
-    }
-
-    // If the URL is like https://www.tiktok.com/t/ZTRav7308
-    if (url.pathname.match(/\/t\/\w+/)) {
-      const videoID = url.pathname.replace("/t/", "").replace(/\/$/, "");
-      if (!videoID)
-        return new Response("Failed to parse Video ID from t URL", {
-          status: 400,
-        });
-
-      // We actually need to go to that page to get a URL we like :)
-      const res = await get("https://www.tiktok.com/t/" + videoID);
-
-      const videoURL = await idFromTikTokURL(res.url);
-      if (videoURL) return Response.redirect(videoURL, 302);
-    }
-
-    // There's a third one, vm.tiktok.com/VIDEO_ID
-    // But, I don't know how to host the subdomain thing in a Worker right now.
-
-    return Response.redirect("https://britmoji.org/");
-  },
-};
+// noinspection JSUnusedGlobalSymbols
+export default app;
