@@ -25,46 +25,53 @@ export const addMetaRoutes = (app: Hono) => {
   app.get("/meta/:videoId/video", async (c) => {
     const videoId = c.req.param("videoId");
     const details = await tiktok.details(videoId);
+    if (!details) throw new StatusError(404);
 
-    if (!details) {
-      throw new StatusError(404);
-    }
+    const urls = details.aweme_details[0].video?.play_addr.url_list;
+    if (!urls) throw new StatusError(404);
+    return c.redirect(urls[urls.length - 1]);
+  });
 
-    return c.redirect(details.itemInfo.itemStruct.video.downloadAddr);
+  // Image metadata
+  app.get("/meta/:videoId/image", async (c) => {
+    const videoId = c.req.param("videoId");
+    const details = await tiktok.details(videoId);
+    if (!details) throw new StatusError(404);
+
+    // Use the image or default to the video
+    const urls =
+      details.aweme_details[0].image_post_info?.images[0]?.display_image
+        ?.url_list || details.aweme_details[0].video?.cover?.url_list;
+
+    if (!urls) throw new StatusError(404);
+    return c.redirect(urls[0]);
   });
 
   // Thumbnail metadata
   app.get("/meta/:videoId/thumbnail", async (c) => {
     const videoId = c.req.param("videoId");
     const details = await tiktok.details(videoId);
+    if (!details) throw new StatusError(404);
 
-    if (!details) {
-      throw new StatusError(404);
-    }
-
-    return c.redirect(details.itemInfo.itemStruct.video.cover);
+    const video = details.aweme_details[0].video?.cover.url_list[0];
+    if (!video) throw new StatusError(404);
+    return c.redirect(video);
   });
 
   // Audio metadata
   app.get("/meta/:videoId/audio", async (c) => {
     const videoId = c.req.param("videoId");
     const details = await tiktok.details(videoId);
+    if (!details) throw new StatusError(404);
 
-    if (!details) {
-      throw new StatusError(404);
-    }
-
-    return c.redirect(details.itemInfo.itemStruct.music.playUrl);
+    return c.redirect(details.aweme_details[0].music.play_url.url_list[0]);
   });
 
   // All metadata
   app.get("/meta/:videoId", async (c) => {
     const videoId = c.req.param("videoId");
     const details = await tiktok.details(videoId);
-
-    if (!details) {
-      throw new StatusError(404);
-    }
+    if (!details) throw new StatusError(404);
 
     return c.json(details);
   });

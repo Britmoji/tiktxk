@@ -17,7 +17,7 @@
  */
 
 import { Context, Handler, Hono } from "hono";
-import { ItemDetails, tiktok } from "@/util/tiktok";
+import { Aweme, tiktok } from "@/util/tiktok";
 import { get } from "@/util/http";
 import { StatusError } from "@/types/cloudflare";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -25,14 +25,15 @@ import { jsx } from "hono/jsx";
 import { formatNumber } from "@/util/numbers";
 import { Constants } from "@/constants";
 
-const DiscordEmbed = ({ data }: { data: ItemDetails }) => {
-  const videoId = data.itemInfo.itemStruct.id;
-  const video = data.itemInfo.itemStruct.video;
-  const stats = data.itemInfo.itemStruct.stats;
-  const author = data.itemInfo.itemStruct.author.uniqueId;
+const DiscordEmbed = ({ data }: { data: Aweme }) => {
+  const likes = formatNumber(data.statistics.digg_count, 1);
+  const comments = formatNumber(data.statistics.comment_count, 1);
 
-  const likes = formatNumber(stats.diggCount, 1);
-  const comments = formatNumber(stats.commentCount, 1);
+  const previewComponent = data.image_post_info ? (
+    <ImagePreview data={data} />
+  ) : (
+    <VideoPreview data={data} />
+  );
 
   // noinspection HtmlRequiredTitleElement
   return (
@@ -46,20 +47,13 @@ const DiscordEmbed = ({ data }: { data: ItemDetails }) => {
           content={Math.random() > 0.5 ? "#69C9D0" : "#EE1D52"}
         />
 
-        {/* Video Metadata */}
-        <meta
-          property="og:video"
-          content={`${Constants.HOST_URL}/meta/${videoId}/video`}
-        />
-        <meta property="og:video:type" content={`video/${video.format}`} />
-        <meta property="og:video:width" content={video.width} />
-        <meta property="og:video:height" content={video.height} />
-        <meta property="og:type" content="video.other" />
+        {/* Preview Metadata */}
+        {previewComponent}
 
         {/* The additional oembed is pulled by Discord to enable improved embeds. */}
         <link
           rel="alternate"
-          href={`${Constants.HOST_URL}/internal/embed?username=${author}`}
+          href={`${Constants.HOST_URL}/internal/embed?username=${data.author.unique_id}`}
           type="application/json+oembed"
         />
       </head>
@@ -67,11 +61,44 @@ const DiscordEmbed = ({ data }: { data: ItemDetails }) => {
   );
 };
 
+const VideoPreview = ({ data }: { data: Aweme }) => (
+  <div>
+    <meta
+      property="og:video"
+      content={`${Constants.HOST_URL}/meta/${data.aweme_id}/video`}
+    />
+    <meta property="og:video:type" content={`video/mp4`} />
+    <meta property="og:video:width" content={data.video!.play_addr.width} />
+    <meta property="og:video:height" content={data.video!.play_addr.height} />
+    <meta property="og:type" content="video.other" />
+  </div>
+);
+
+const ImagePreview = ({ data }: { data: Aweme }) => (
+  <div>
+    <meta
+      property="og:image"
+      content={`${Constants.HOST_URL}/meta/${data.aweme_id}/image`}
+    />
+    <meta property="og:image:type" content={`image/jpeg`} />
+    <meta
+      property="og:image:width"
+      content={data.image_post_info?.images[0].display_image.width}
+    />
+    <meta
+      property="og:image:height"
+      content={data.image_post_info?.images[0].display_image.height}
+    />
+    <meta property="og:type" content="image.other" />
+    <meta property="twitter:card" content="summary_large_image" />
+  </div>
+);
+
 export const addTikTokRoutes = (app: Hono) => {
   const videoIdRegex = /https:\/\/www\.tiktok\.com\/@[^/]+\/video\/(\d+)/;
 
   // Main renderer
-  const render = (c: Context, data: ItemDetails) => {
+  const render = (c: Context, data: Aweme) => {
     const raw = c.req.query("raw") === "true";
 
     // Discord embed rendering
@@ -81,12 +108,14 @@ export const addTikTokRoutes = (app: Hono) => {
 
     // Redirect if raw
     if (raw) {
-      return c.redirect(data.itemInfo.itemStruct.video.downloadAddr);
+      // TODO: Error handling
+      const urls = data.video?.play_addr.url_list ?? [];
+      return c.redirect(urls[urls.length - 1]);
     }
 
     // Normal redirect
     return c.redirect(
-      `https://www.tiktok.com/@${data.itemInfo.itemStruct.author.uniqueId}/video/${data.itemInfo.itemStruct.id}`,
+      `https://www.tiktok.com/@${data.author.unique_id}/video/${data.aweme_id}`,
     );
   };
 
@@ -96,8 +125,9 @@ export const addTikTokRoutes = (app: Hono) => {
     const videoId = c.req.param("videoId");
 
     // Lookup details
+    // TODO: Error handling
     const details = await tiktok.details(videoId);
-    return render(c, details);
+    return render(c, details.aweme_details[0]);
   };
 
   // E.g. https://www.tiktok.com/t/ZTRav7308
@@ -116,8 +146,9 @@ export const addTikTokRoutes = (app: Hono) => {
       }
 
       // Lookup details
+      // TODO: Error handling
       const details = await tiktok.details(match[1]);
-      return render(c, details);
+      return render(c, details.aweme_details[0]);
     };
 
   // https://www.tiktok.com/@username/video/1234567891234567891

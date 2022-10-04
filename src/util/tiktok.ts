@@ -32,41 +32,82 @@ class TikTokAPI extends APIClient {
     };
   }
 
-  async details(videoID: string): Promise<ItemDetails> {
-    return this.get(`/item/detail/?itemId=${videoID}`);
+  async details(videoID: string): Promise<InternalItemDetail> {
+    // Throw if the video ID is not a number
+    if (isNaN(Number(videoID))) {
+      throw new Error("Invalid video ID");
+    }
+
+    return fetch(
+      `https://api19-normal-c-alisg.tiktokv.com/aweme/v1/multi/aweme/detail/?device_id=7150415238323324421&channel=googleplay&aid=1233&app_name=musical_ly&version_code=260403&version_name=26.4.3&device_platform=android&device_type=Pixel%2B5&os_version=12&cache=${videoID}`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent":
+            "com.zhiliaoapp.musically/2022604030 (Linux; U; Android 12; en_AU; Pixel 5; Build/SQ3A.220705.003.A1;tt-ok/3.12.13.1)",
+          "x-argus":
+            "I/Qq8Aucfjg1Fs2fRb1R/JfVq5LxV9BTvBcIDOTlk6e2btnd9hkNZjPtQg6zHlM1T6bnp3H0xOV6JEoF+nDCU9hqVm7ZuFlUEkQkxoxgRUd0kCZEy2gkecaTzI2J5EjdOx30q1O+qg0+qFG3X0krNo25U27nZtAHLufJxpK54SqAxFmuJwc2E8/GgZT0iV3sCiqA3cTiRsU04Mm9w1e4ZS0HEFCz6wGR6BuqvQCQiwJwxEmmowbmYCdXrykhbdyuGSAcmO4tbXPhCODwrrcgADX/ooAVcsP60SOUj0FdCwNrZumH7k/27Xwz2xIv2iTQ7vmsnfflh+ZEtq7/jElUDCIb",
+          "x-ladon": "QcAZOBZPYsUdPhgSa32MfkUyMIs4EEAJQelTPIIyIReyUK1K",
+        },
+        body: new URLSearchParams({
+          aweme_ids: `[${videoID}]`,
+          request_source: "0",
+        }),
+        cf: {
+          cacheEverything: true,
+          cacheTtlByStatus: {
+            "200-299": 60 * 60,
+            "400-499": 5,
+            "500-599": 0,
+          },
+        },
+      },
+    ).then((res) => res.json());
   }
 }
 
-export interface ItemDetails {
-  shareMeta: {
-    desc: string;
-    title: string;
+/**
+ * Modern TikTok API
+ */
+export interface InternalItemDetail {
+  aweme_details: Aweme[];
+}
+
+export interface Aweme {
+  aweme_id: string;
+  music: {
+    play_url: AssetDetail;
   };
-  itemInfo: {
-    itemStruct: {
-      id: string;
-      author: {
-        avatarThumb: string;
-        uniqueId: string;
-      };
-      stats: {
-        commentCount: number;
-        diggCount: number;
-        playCount: number;
-        shareCount: number;
-      };
-      video: {
-        downloadAddr: string;
-        cover: string;
-        format: string;
-        height: number;
-        width: number;
-      };
-      music: {
-        playUrl: string;
-      };
-    };
+  author: {
+    aweme_details: AssetDetail;
+    unique_id: string;
   };
+  video?: {
+    // Prefer the last video in the url list
+    // No format, but we can get it from the url
+    play_addr: AssetDetail;
+    cover: AssetDetail;
+  };
+  image_post_info?: {
+    images: {
+      display_image: AssetDetail;
+    }[];
+  };
+  statistics: {
+    digg_count: number;
+    comment_count: number;
+    share_count: number;
+    play_count: number;
+  };
+}
+
+export interface AssetDetail {
+  uri: string;
+  url_list: string[];
+
+  height: number;
+  width: number;
 }
 
 export const tiktok = new TikTokAPI();
