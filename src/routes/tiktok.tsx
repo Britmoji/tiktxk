@@ -17,7 +17,7 @@
  */
 
 import { Context, Handler, Hono } from "hono";
-import { Aweme, tiktok } from "@/util/tiktok";
+import { AdaptedItemDetails, Aweme, tiktok } from "@/util/tiktok";
 import { get } from "@/util/http";
 import { StatusError } from "@/types/cloudflare";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -25,15 +25,17 @@ import { jsx } from "hono/jsx";
 import { formatNumber } from "@/util/numbers";
 import { Constants } from "@/constants";
 
-const DiscordEmbed = ({ data }: { data: Aweme }) => {
-  const likes = formatNumber(data.statistics.digg_count, 1);
-  const comments = formatNumber(data.statistics.comment_count, 1);
+const DiscordEmbed = ({ data }: { data: AdaptedItemDetails }) => {
+  const likes = formatNumber(data.statistics.likes, 1);
+  const comments = formatNumber(data.statistics.comments, 1);
 
-  const previewComponent = data.image_post_info ? (
-    <ImagePreview data={data} />
-  ) : (
-    <VideoPreview data={data} />
-  );
+  // TODO: Temporarily disabled
+  // const previewComponent = data.image_post_info ? (
+  //   <ImagePreview data={data} />
+  // ) : (
+  //   <VideoPreview data={data} />
+  // );
+  const previewComponent = <VideoPreview data={data} />;
 
   // noinspection HtmlRequiredTitleElement
   return (
@@ -53,7 +55,7 @@ const DiscordEmbed = ({ data }: { data: Aweme }) => {
         {/* The additional oembed is pulled by Discord to enable improved embeds. */}
         <link
           rel="alternate"
-          href={`${Constants.HOST_URL}/internal/embed?username=${data.author.unique_id}`}
+          href={`${Constants.HOST_URL}/internal/embed?username=${data.author.username}`}
           type="application/json+oembed"
         />
       </head>
@@ -61,19 +63,20 @@ const DiscordEmbed = ({ data }: { data: Aweme }) => {
   );
 };
 
-const VideoPreview = ({ data }: { data: Aweme }) => (
+const VideoPreview = ({ data }: { data: AdaptedItemDetails }) => (
   <div>
     <meta
       property="og:video"
-      content={`${Constants.HOST_URL}/meta/${data.aweme_id}/video`}
+      content={`${Constants.HOST_URL}/meta/${data.id}/video`}
     />
     <meta property="og:video:type" content={`video/mp4`} />
-    <meta property="og:video:width" content={data.video!.play_addr.width} />
-    <meta property="og:video:height" content={data.video!.play_addr.height} />
+    <meta property="og:video:width" content={data.video.width} />
+    <meta property="og:video:height" content={data.video.height} />
     <meta property="og:type" content="video.other" />
   </div>
 );
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ImagePreview = ({ data }: { data: Aweme }) => (
   <div>
     <meta
@@ -98,7 +101,7 @@ export const addTikTokRoutes = (app: Hono) => {
   const videoIdRegex = /https:\/\/www\.tiktok\.com\/@[^/]+\/video\/(\d+)/;
 
   // Main renderer
-  const render = (c: Context, data: Aweme) => {
+  const render = (c: Context, data: AdaptedItemDetails) => {
     const raw = c.req.query("raw") === "true";
 
     // Discord embed rendering
@@ -109,13 +112,12 @@ export const addTikTokRoutes = (app: Hono) => {
     // Redirect if raw
     if (raw) {
       // TODO: Error handling
-      const urls = data.video?.play_addr.url_list ?? [];
-      return c.redirect(urls[urls.length - 1]);
+      return c.redirect(data.video.playUrl);
     }
 
     // Normal redirect
     return c.redirect(
-      `https://www.tiktok.com/@${data.author.unique_id}/video/${data.aweme_id}`,
+      `https://www.tiktok.com/@${data.author.username}/video/${data.id}`,
     );
   };
 
@@ -127,7 +129,9 @@ export const addTikTokRoutes = (app: Hono) => {
     // Lookup details
     // TODO: Error handling
     const details = await tiktok.details(videoId);
-    return render(c, details.aweme_details[0]);
+    if (!details) throw new StatusError(404, "Video not found");
+
+    return render(c, details);
   };
 
   // E.g. https://www.tiktok.com/t/ZTRav7308
@@ -148,7 +152,9 @@ export const addTikTokRoutes = (app: Hono) => {
       // Lookup details
       // TODO: Error handling
       const details = await tiktok.details(match[1]);
-      return render(c, details.aweme_details[0]);
+      if (!details) throw new StatusError(404, "Video not found");
+
+      return render(c, details);
     };
 
   // https://www.tiktok.com/@username/video/1234567891234567891

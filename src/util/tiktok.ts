@@ -19,7 +19,7 @@
 import { APIClient } from "./client";
 
 export const USER_AGENT =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0";
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36";
 
 class TikTokAPI extends APIClient {
   constructor() {
@@ -32,13 +32,92 @@ class TikTokAPI extends APIClient {
     };
   }
 
-  async details(videoID: string): Promise<InternalItemDetail> {
+  async details(videoID: string): Promise<AdaptedItemDetails | undefined> {
+    try {
+      // Fetch internal details
+      const internal = await this.internalDetails(videoID);
+      const details = internal.aweme_details[0];
+      if (!details) return undefined;
+
+      const videoPlayUrls = details?.video?.play_addr.url_list[0] ?? [];
+      const audioPlayUrls = details?.music?.play_url.url_list[0] ?? [];
+
+      const thumbnail =
+        details.image_post_info?.images[0]?.display_image?.url_list ||
+        details.video?.cover?.url_list ||
+        [];
+
+      // Adapt the data
+      return {
+        id: details.aweme_id,
+        video: {
+          playUrl: videoPlayUrls[videoPlayUrls?.length - 1],
+          height: details.video?.play_addr.height ?? 1080,
+          width: details.video?.play_addr.width ?? 1920,
+        },
+        image: {
+          url: thumbnail[thumbnail?.length - 1],
+        },
+        audio: {
+          playUrl: audioPlayUrls[audioPlayUrls?.length - 1],
+        },
+        author: {
+          username: details.author?.unique_id,
+        },
+        statistics: {
+          likes: details.statistics?.digg_count ?? 0,
+          comments: details.statistics?.comment_count ?? 0,
+        },
+        src: {
+          type: "internal",
+          data: details,
+        },
+      };
+    } catch (e) {
+      // If the internal details fail, fallback to the public details
+      const item = await this.publicDetails(videoID);
+      if (!item) return undefined;
+
+      // Adapt the data
+      return {
+        id: item.itemInfo.itemStruct.id,
+        video: {
+          playUrl: item.itemInfo.itemStruct.video.downloadAddr,
+          height: item.itemInfo.itemStruct.video.height,
+          width: item.itemInfo.itemStruct.video.width,
+        },
+        image: {
+          url: item.itemInfo.itemStruct.video.cover,
+        },
+        audio: {
+          playUrl: item.itemInfo.itemStruct.music.playUrl,
+        },
+        author: {
+          username: item.itemInfo.itemStruct.author.uniqueId,
+        },
+        statistics: {
+          likes: item.itemInfo.itemStruct.stats.diggCount,
+          comments: item.itemInfo.itemStruct.stats.commentCount,
+        },
+        src: {
+          type: "public",
+          data: item,
+        },
+      };
+    }
+  }
+
+  async publicDetails(videoID: string): Promise<PublicItemDetails> {
+    return this.get(`/item/detail/?itemId=${videoID}`);
+  }
+
+  async internalDetails(videoID: string): Promise<InternalItemDetail> {
     // Throw if the video ID is not a number
     if (isNaN(Number(videoID))) {
       throw new Error("Invalid video ID");
     }
 
-    return fetch(
+    const res = await fetch(
       `https://api19-normal-c-alisg.tiktokv.com/aweme/v1/multi/aweme/detail/?device_id=7150415238323324421&channel=googleplay&aid=1233&app_name=musical_ly&version_code=260403&version_name=26.4.3&device_platform=android&device_type=Pixel%2B5&os_version=12&cache=${videoID}`,
       {
         method: "POST",
@@ -63,13 +142,20 @@ class TikTokAPI extends APIClient {
           },
         },
       },
-    ).then((res) => res.json());
+    );
+
+    if (res.headers.get("Content-Length") === "0") {
+      throw new Error("Failed to fetch internal details");
+    }
+
+    return res.json();
   }
 }
 
 /**
  * Modern TikTok API
  */
+//region Modern TikTok API
 export interface InternalItemDetail {
   aweme_details: Aweme[];
 }
@@ -109,5 +195,83 @@ export interface AssetDetail {
   height: number;
   width: number;
 }
+
+//endregion
+
+/**
+ * Public TikTok API
+ */
+//region Public TikTok API
+export interface PublicItemDetails {
+  shareMeta: {
+    desc: string;
+    title: string;
+  };
+  itemInfo: {
+    itemStruct: {
+      id: string;
+      author: {
+        avatarThumb: string;
+        uniqueId: string;
+      };
+      stats: {
+        commentCount: number;
+        diggCount: number;
+        playCount: number;
+        shareCount: number;
+      };
+      video: {
+        downloadAddr: string;
+        cover: string;
+        format: string;
+        height: number;
+        width: number;
+      };
+      music: {
+        playUrl: string;
+      };
+    };
+  };
+}
+
+//endregion
+
+/**
+ * Adapted TikTok API
+ */
+//region Adapted TikTok API
+export interface AdaptedItemDetails {
+  id: string;
+
+  video: {
+    playUrl: string;
+    width: number;
+    height: number;
+  };
+
+  image: {
+    url: string;
+  };
+
+  audio: {
+    playUrl: string;
+  };
+
+  statistics: {
+    likes: number;
+    comments: number;
+  };
+
+  author: {
+    username: string;
+  };
+
+  src: {
+    type: "internal" | "public";
+    data: Aweme | PublicItemDetails;
+  };
+}
+
+//endregion
 
 export const tiktok = new TikTokAPI();

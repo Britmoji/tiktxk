@@ -27,9 +27,7 @@ export const addMetaRoutes = (app: Hono) => {
     const details = await tiktok.details(videoId);
     if (!details) throw new StatusError(404);
 
-    const urls = details.aweme_details[0].video?.play_addr.url_list;
-    if (!urls) throw new StatusError(404);
-    return c.redirect(urls[urls.length - 1]);
+    return c.redirect(details.video.playUrl);
   });
 
   // Image metadata
@@ -38,24 +36,7 @@ export const addMetaRoutes = (app: Hono) => {
     const details = await tiktok.details(videoId);
     if (!details) throw new StatusError(404);
 
-    // Use the image or default to the video
-    const urls =
-      details.aweme_details[0].image_post_info?.images[0]?.display_image
-        ?.url_list || details.aweme_details[0].video?.cover?.url_list;
-
-    if (!urls) throw new StatusError(404);
-    return c.redirect(urls[0]);
-  });
-
-  // Thumbnail metadata
-  app.get("/meta/:videoId/thumbnail", async (c) => {
-    const videoId = c.req.param("videoId");
-    const details = await tiktok.details(videoId);
-    if (!details) throw new StatusError(404);
-
-    const video = details.aweme_details[0].video?.cover.url_list[0];
-    if (!video) throw new StatusError(404);
-    return c.redirect(video);
+    return c.redirect(details.image.url);
   });
 
   // Audio metadata
@@ -64,7 +45,7 @@ export const addMetaRoutes = (app: Hono) => {
     const details = await tiktok.details(videoId);
     if (!details) throw new StatusError(404);
 
-    return c.redirect(details.aweme_details[0].music.play_url.url_list[0]);
+    return c.redirect(details.audio.playUrl);
   });
 
   // All metadata
