@@ -36,11 +36,11 @@ class TikTokAPI extends APIClient {
     try {
       // Fetch internal details
       const internal = await this.internalDetails(videoID);
-      const details = internal.aweme_details[0];
+      const details = internal.aweme_list[0];
       if (!details) return undefined;
 
-      const videoPlayUrls = details?.video?.play_addr.url_list[0] ?? [];
-      const audioPlayUrls = details?.music?.play_url.url_list[0] ?? [];
+      const videoPlayUrls = details?.video?.play_addr.url_list ?? [];
+      const audioPlayUrls = details?.music?.play_url.url_list ?? [];
 
       const thumbnail =
         details.image_post_info?.images[0]?.display_image?.url_list ||
@@ -117,22 +117,19 @@ class TikTokAPI extends APIClient {
       throw new Error("Invalid video ID");
     }
 
+    // Based off yt-dlp tiktok extractor. https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/tiktok.py
+    // Turns out the only parameter you need is aid (which appears to influence some of the fields in the output,
+    // maybe for compatibility with older app versions?).
+    // 1180 seems to be a good value where all the fields we need are present.
+    // The User-Agent isn't strictly required, but some appear to be blacklisted. This one (based off yt-dlp) should be good.
+
     const res = await fetch(
-      `https://api19-normal-c-alisg.tiktokv.com/aweme/v1/multi/aweme/detail/?device_id=7150415238323324421&channel=googleplay&aid=1233&app_name=musical_ly&version_code=260403&version_name=26.4.3&device_platform=android&device_type=Pixel%2B5&os_version=12&cache=${videoID}`,
+      `https://api-h2.tiktokv.com/aweme/v1/feed/?aweme_id=${videoID}&aid=1180`,
       {
-        method: "POST",
         headers: {
-          "content-type": "application/x-www-form-urlencoded",
-          "user-agent":
-            "com.zhiliaoapp.musically/2022604030 (Linux; U; Android 12; en_AU; Pixel 5; Build/SQ3A.220705.003.A1;tt-ok/3.12.13.1)",
-          "x-argus":
-            "I/Qq8Aucfjg1Fs2fRb1R/JfVq5LxV9BTvBcIDOTlk6e2btnd9hkNZjPtQg6zHlM1T6bnp3H0xOV6JEoF+nDCU9hqVm7ZuFlUEkQkxoxgRUd0kCZEy2gkecaTzI2J5EjdOx30q1O+qg0+qFG3X0krNo25U27nZtAHLufJxpK54SqAxFmuJwc2E8/GgZT0iV3sCiqA3cTiRsU04Mm9w1e4ZS0HEFCz6wGR6BuqvQCQiwJwxEmmowbmYCdXrykhbdyuGSAcmO4tbXPhCODwrrcgADX/ooAVcsP60SOUj0FdCwNrZumH7k/27Xwz2xIv2iTQ7vmsnfflh+ZEtq7/jElUDCIb",
-          "x-ladon": "QcAZOBZPYsUdPhgSa32MfkUyMIs4EEAJQelTPIIyIReyUK1K",
+          "User-Agent":
+            "com.ss.android.ugc.trill/250602 (Linux; U; Android 10; en_US; Pixel 4; Build/QQ3A.200805.001; Cronet/58.0.2991.0)",
         },
-        body: new URLSearchParams({
-          aweme_ids: `[${videoID}]`,
-          request_source: "0",
-        }),
         cf: {
           cacheEverything: true,
           cacheTtlByStatus: {
@@ -157,7 +154,7 @@ class TikTokAPI extends APIClient {
  */
 //region Modern TikTok API
 export interface InternalItemDetail {
-  aweme_details: Aweme[];
+  aweme_list: Aweme[];
 }
 
 export interface Aweme {
@@ -166,7 +163,6 @@ export interface Aweme {
     play_url: AssetDetail;
   };
   author: {
-    aweme_details: AssetDetail;
     unique_id: string;
   };
   video?: {
