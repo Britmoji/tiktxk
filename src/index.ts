@@ -26,6 +26,7 @@ import { addIndexRoutes } from "./routes";
 import { addEmbedRoutes } from "@/routes/embed";
 import { addMetaRoutes } from "@/routes/meta";
 import { Constants } from "./constants";
+import Toucan from "toucan-js";
 
 const app = new Hono();
 
@@ -54,6 +55,21 @@ app.onError((err, c) => {
   } else {
     console.error(err);
     c.status(500);
+  }
+
+  if (c.env.SENTRY_DSN) {
+    try {
+      const sentry = new Toucan({
+        dsn: c.env.SENTRY_DSN,
+        context: c.executionCtx,
+        allowedHeaders: ["User-Agent"],
+        allowedSearchParams: /(.*)/,
+      });
+
+      sentry.captureException(err);
+    } catch (e) {
+      console.error("Failed to send error to Sentry", e);
+    }
   }
 
   return c.json({

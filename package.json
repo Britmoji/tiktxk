@@ -33,6 +33,7 @@
     "url": "https://github.com/Britmoji/tiktxk/issues"
   },
   "dependencies": {
-    "hono": "^2.2.1"
+    "hono": "^2.2.1",
+    "toucan-js": "^2.7.0"
   }
 }
