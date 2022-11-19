@@ -27,7 +27,7 @@ export const addMetaRoutes = (app: Hono) => {
     const details = await tiktok.details(videoId);
     if (!details) throw new StatusError(404);
 
-    return c.redirect(details.video.playUrl);
+    return c.redirect(details.video.url);
   });
 
   // Image metadata
@@ -35,6 +35,10 @@ export const addMetaRoutes = (app: Hono) => {
     const videoId = c.req.param("videoId");
     const details = await tiktok.details(videoId);
     if (!details) throw new StatusError(404);
+
+    if (details.imagePost?.images?.length) {
+      return c.redirect(details.imagePost.images[0].url);
+    }
 
     return c.redirect(details.image.url);
   });
@@ -45,7 +49,7 @@ export const addMetaRoutes = (app: Hono) => {
     const details = await tiktok.details(videoId);
     if (!details) throw new StatusError(404);
 
-    return c.redirect(details.audio.playUrl);
+    return c.redirect(details.audio.url);
   });
 
   // All metadata

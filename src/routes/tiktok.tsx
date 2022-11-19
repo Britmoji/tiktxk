@@ -17,7 +17,7 @@
  */
 
 import { Context, Handler, Hono } from "hono";
-import { AdaptedItemDetails, Aweme, tiktok } from "@/util/tiktok";
+import { AdaptedItemDetails, tiktok } from "@/util/tiktok";
 import { get } from "@/util/http";
 import { StatusError } from "@/types/cloudflare";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -29,13 +29,12 @@ const DiscordEmbed = ({ data }: { data: AdaptedItemDetails }) => {
   const likes = formatNumber(data.statistics.likes, 1);
   const comments = formatNumber(data.statistics.comments, 1);
 
-  // TODO: Temporarily disabled
-  // const previewComponent = data.image_post_info ? (
-  //   <ImagePreview data={data} />
-  // ) : (
-  //   <VideoPreview data={data} />
-  // );
-  const previewComponent = <VideoPreview data={data} />;
+  const authorSuffix = data.imagePost ? "slideshow" : "";
+  const previewComponent = data.imagePost ? (
+    <ImagePreview data={data} />
+  ) : (
+    <VideoPreview data={data} />
+  );
 
   // noinspection HtmlRequiredTitleElement
   return (
@@ -55,7 +54,7 @@ const DiscordEmbed = ({ data }: { data: AdaptedItemDetails }) => {
         {/* The additional oembed is pulled by Discord to enable improved embeds. */}
         <link
           rel="alternate"
-          href={`${Constants.HOST_URL}/internal/embed?username=${data.author.username}`}
+          href={`${Constants.HOST_URL}/internal/embed?username=${data.author.username}&authorSuffix=${authorSuffix}`}
           type="application/json+oembed"
         />
       </head>
@@ -77,20 +76,17 @@ const VideoPreview = ({ data }: { data: AdaptedItemDetails }) => (
 );
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const ImagePreview = ({ data }: { data: Aweme }) => (
+const ImagePreview = ({ data }: { data: AdaptedItemDetails }) => (
   <div>
     <meta
       property="og:image"
-      content={`${Constants.HOST_URL}/meta/${data.aweme_id}/image`}
+      content={`${Constants.HOST_URL}/meta/${data.id}/image`}
     />
     <meta property="og:image:type" content={`image/jpeg`} />
-    <meta
-      property="og:image:width"
-      content={data.image_post_info?.images[0].display_image.width}
-    />
+    <meta property="og:image:width" content={data.imagePost?.images[0].width} />
     <meta
       property="og:image:height"
-      content={data.image_post_info?.images[0].display_image.height}
+      content={data.imagePost?.images[0].height}
     />
     <meta property="og:type" content="image.other" />
     <meta property="twitter:card" content="summary_large_image" />
@@ -111,8 +107,7 @@ export const addTikTokRoutes = (app: Hono) => {
 
     // Redirect if raw
     if (raw) {
-      // TODO: Error handling
-      return c.redirect(data.video.playUrl);
+      return c.redirect(data.video.url);
     }
 
     // Normal redirect
@@ -127,7 +122,6 @@ export const addTikTokRoutes = (app: Hono) => {
     const videoId = c.req.param("videoId");
 
     // Lookup details
-    // TODO: Error handling
     const details = await tiktok.details(videoId);
     if (!details) throw new StatusError(404, "Video not found");
 
@@ -150,7 +144,6 @@ export const addTikTokRoutes = (app: Hono) => {
       }
 
       // Lookup details
-      // TODO: Error handling
       const details = await tiktok.details(match[1]);
       if (!details) throw new StatusError(404, "Video not found");
 

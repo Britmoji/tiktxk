@@ -51,7 +51,7 @@ class TikTokAPI extends APIClient {
       return {
         id: details.aweme_id,
         video: {
-          playUrl: videoPlayUrls[videoPlayUrls?.length - 1],
+          url: videoPlayUrls[videoPlayUrls?.length - 1],
           height: details.video?.play_addr.height ?? 1080,
           width: details.video?.play_addr.width ?? 1920,
         },
@@ -59,7 +59,7 @@ class TikTokAPI extends APIClient {
           url: thumbnail[thumbnail?.length - 1],
         },
         audio: {
-          playUrl: audioPlayUrls[audioPlayUrls?.length - 1],
+          url: audioPlayUrls[audioPlayUrls?.length - 1],
         },
         author: {
           username: details.author?.unique_id,
@@ -67,6 +67,14 @@ class TikTokAPI extends APIClient {
         statistics: {
           likes: details.statistics?.digg_count ?? 0,
           comments: details.statistics?.comment_count ?? 0,
+        },
+        imagePost: {
+          images:
+            details.image_post_info?.images.map((image) => ({
+              url: image.display_image.url_list[0],
+              width: image.display_image.width,
+              height: image.display_image.height,
+            })) ?? [],
         },
         src: {
           type: "internal",
@@ -82,7 +90,7 @@ class TikTokAPI extends APIClient {
       return {
         id: item.itemInfo.itemStruct.id,
         video: {
-          playUrl: item.itemInfo.itemStruct.video.downloadAddr,
+          url: item.itemInfo.itemStruct.video.downloadAddr,
           height: item.itemInfo.itemStruct.video.height,
           width: item.itemInfo.itemStruct.video.width,
         },
@@ -90,7 +98,7 @@ class TikTokAPI extends APIClient {
           url: item.itemInfo.itemStruct.video.cover,
         },
         audio: {
-          playUrl: item.itemInfo.itemStruct.music.playUrl,
+          url: item.itemInfo.itemStruct.music.playUrl,
         },
         author: {
           username: item.itemInfo.itemStruct.author.uniqueId,
@@ -236,22 +244,18 @@ export interface PublicItemDetails {
  * Adapted TikTok API
  */
 //region Adapted TikTok API
+export interface MediaSource {
+  url: string;
+  width?: number;
+  height?: number;
+}
+
 export interface AdaptedItemDetails {
   id: string;
 
-  video: {
-    playUrl: string;
-    width: number;
-    height: number;
-  };
-
-  image: {
-    url: string;
-  };
-
-  audio: {
-    playUrl: string;
-  };
+  video: MediaSource;
+  image: MediaSource;
+  audio: MediaSource;
 
   statistics: {
     likes: number;
@@ -260,6 +264,10 @@ export interface AdaptedItemDetails {
 
   author: {
     username: string;
+  };
+
+  imagePost?: {
+    images: MediaSource[];
   };
 
   src: {

@@ -7,6 +7,7 @@
   "scripts": {
     "start": "wrangler dev",
     "deploy": "wrangler publish",
+    "tunnel": "cloudflared tunnel run --url http://127.0.0.1:8787",
     "lint:fix": "yarn run --silent lint:prettier:fix && yarn run --silent lint:eslint:fix",
     "lint:prettier:fix": "prettier -w \"src/**/*.{js,jsx,ts,tsx}\" -u",
     "lint:eslint:fix": "eslint --fix \"src/**/*.{js,jsx,ts,tsx}\""

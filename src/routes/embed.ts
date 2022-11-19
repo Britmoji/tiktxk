@@ -24,8 +24,11 @@ export const addEmbedRoutes = (app: Hono) => {
     const username = c.req.query("username");
     if (!username) throw new StatusError(400, "Missing username");
 
+    const authorSuffix = c.req.query("authorSuffix");
     return c.json({
-      author_name: `@${username}`,
+      author_name: `@${username}${
+        authorSuffix && authorSuffix.length ? ` (${authorSuffix})` : ""
+      }`,
       author_url: `https://tiktok.com/@${username}`,
       provider_name: "TikTxk - Embed using s/o/x",
       provider_url: "https://github.com/britmoji/tiktxk",
