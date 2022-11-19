@@ -68,14 +68,15 @@ class TikTokAPI extends APIClient {
           likes: details.statistics?.digg_count ?? 0,
           comments: details.statistics?.comment_count ?? 0,
         },
-        imagePost: {
-          images:
-            details.image_post_info?.images.map((image) => ({
-              url: image.display_image.url_list[0],
-              width: image.display_image.width,
-              height: image.display_image.height,
-            })) ?? [],
-        },
+        imagePost: details.image_post_info
+          ? {
+              images: details.image_post_info.images.map((image) => ({
+                url: image.display_image.url_list[0],
+                width: image.display_image.width,
+                height: image.display_image.height,
+              })),
+            }
+          : undefined,
         src: {
           type: "internal",
           data: details,
