@@ -133,7 +133,7 @@ class TikTokAPI extends APIClient {
     // The User-Agent isn't strictly required, but some appear to be blacklisted. This one (based off yt-dlp) should be good.
 
     const res = await fetch(
-      `https://api-h2.tiktokv.com/aweme/v1/feed/?aweme_id=${videoID}&aid=1180`,
+      `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=${videoID}&aid=1180`,
       {
         headers: {
           "User-Agent":
