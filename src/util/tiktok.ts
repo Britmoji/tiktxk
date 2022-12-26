@@ -127,34 +127,91 @@ class TikTokAPI extends APIClient {
     }
 
     // Based off yt-dlp tiktok extractor. https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/tiktok.py
-    // Turns out the only parameter you need is aid (which appears to influence some of the fields in the output,
+    // Turns out the only parameter you need is aid (which appears to influence some fields in the output,
     // maybe for compatibility with older app versions?).
-    // 1180 seems to be a good value where all the fields we need are present.
     // The User-Agent isn't strictly required, but some appear to be blacklisted. This one (based off yt-dlp) should be good.
 
-    const res = await fetch(
-      `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=${videoID}&aid=1180`,
-      {
-        headers: {
-          "User-Agent":
-            "com.ss.android.ugc.trill/250602 (Linux; U; Android 10; en_US; Pixel 4; Build/QQ3A.200805.001; Cronet/58.0.2991.0)",
-        },
-        cf: {
-          cacheEverything: true,
-          cacheTtlByStatus: {
-            "200-299": 60 * 60,
-            "400-499": 5,
-            "500-599": 0,
+    const aid = "1180";
+    const appVersions = [
+      { version_name: "26.1.3", version_code: "260103" },
+      { version_name: "26.1.2", version_code: "260102" },
+      { version_name: "26.1.1", version_code: "260101" },
+      { version_name: "25.6.2", version_code: "256202" },
+    ];
+
+    for (const params of appVersions) {
+      const queryString = new URLSearchParams({
+        // Required version data for compatibility
+        aid,
+        ...params,
+
+        // Provide the Aweme ID
+        aweme_id: videoID,
+
+        // Required headers to spoof the app
+        build_number: params.version_name,
+        manifest_version_code: params.version_code,
+        update_version_code: params.version_code,
+
+        // Random 16 character hex string
+        opeudid: [...Array(16)]
+          .map(() => Math.floor(Math.random() * 16).toString(16))
+          .join(""),
+
+        // Random 16 character digit string
+        uuid: [...Array(16)].map(() => Math.floor(Math.random() * 10)).join(""),
+
+        _rticket: Math.floor(Date.now()).toString(),
+        ts: Math.floor(Date.now() / 1000).toString(),
+
+        // Device meta
+        device_brand: "Google",
+        device_type: "Pixel 4",
+        device_platform: "android",
+        resolution: "1080*1920",
+        dpi: "420",
+        os_version: "10",
+        os_api: "29",
+        carrier_region: "US",
+        sys_region: "US",
+        region: "US",
+        app_name: "trill",
+        app_language: "en",
+        language: "en",
+        timezone_name: "America/New_York",
+        timezone_offset: "-14400",
+        channel: "googleplay",
+        ac: "wifi",
+        mcc_mnc: "310260",
+        is_my_cn: "0",
+        ssmix: "a",
+        as: "a1qwert123",
+        cp: "cbfhckdckkde1",
+      });
+
+      const res = await fetch(
+        `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?${queryString.toString()}`,
+        {
+          headers: {
+            "User-Agent":
+              "com.ss.android.ugc.trill/250602 (Linux; U; Android 10; en_US; Pixel 4; Build/QQ3A.200805.001; Cronet/58.0.2991.0)",
+          },
+          cf: {
+            cacheEverything: true,
+            cacheTtlByStatus: {
+              "200-299": 60 * 60,
+              "400-499": 5,
+              "500-599": 0,
+            },
           },
         },
-      },
-    );
+      );
 
-    if (res.headers.get("Content-Length") === "0") {
-      throw new Error("Failed to fetch internal details");
+      if (res.headers.get("Content-Length") === "0") continue;
+      return res.json();
     }
 
-    return res.json();
+    throw new Error("Failed to fetch internal details");
   }
 }
 
