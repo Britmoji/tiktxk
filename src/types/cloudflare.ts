@@ -16,8 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { Constants } from "@/constants";
+
 export class StatusError extends Error {
-  private static readonly statusCodes = new Map<number, string>([
+  private static readonly DEFAULT_MESSAGE = `An unknown error occurred, please report this issue at ${Constants.HOST_URL}/issue, and include the request ID.`;
+
+  public static readonly LANG = {
+    UNKNOWN_AWEME:
+      "The video could not be found. Either it was deleted, or TikTok has removed it.",
+    FAILED_TO_PARSE_VIDEO_ID:
+      "The video ID could not be parsed, is it a valid TikTok URL?",
+  };
+
+  private static readonly STATUSES = new Map<number, string>([
     [400, "Bad Request"],
     [401, "Unauthorized"],
     [403, "Forbidden"],
@@ -25,7 +36,14 @@ export class StatusError extends Error {
     [405, "Method Not Allowed"],
   ]);
 
-  constructor(public status: number, message?: string) {
-    super(message || StatusError.statusCodes.get(status) || "Unknown Error");
+  constructor(
+    public status: number,
+    message?: string | keyof typeof StatusError.LANG,
+  ) {
+    super(
+      message
+        ? StatusError.LANG[message] || message
+        : StatusError.STATUSES.get(status) || StatusError.DEFAULT_MESSAGE,
+    );
   }
 }

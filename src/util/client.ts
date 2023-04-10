@@ -16,8 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { StatusError } from "@/types/cloudflare";
-
 export abstract class APIClient {
   protected constructor(private readonly base: string) {}
 
@@ -53,8 +51,13 @@ export abstract class APIClient {
       },
     });
 
-    if (response.status !== 200)
-      throw new StatusError(response.status, await response.text());
+    if (response.status !== 200) {
+      throw new Error(
+        `API returned ${
+          response.status
+        } status code: ${await response.text()}}`,
+      );
+    }
 
     return response.json();
   }

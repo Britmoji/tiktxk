@@ -20,50 +20,42 @@ import { Context, Handler, Hono } from "hono";
 import { AdaptedItemDetails, tiktok } from "@/util/tiktok";
 import { get } from "@/util/http";
 import { StatusError } from "@/types/cloudflare";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { jsx } from "hono/jsx";
 import { formatNumber } from "@/util/numbers";
 import { Constants } from "@/constants";
+import { GenericDiscordEmbed, respondDiscord } from "@/util/discord";
+import { Fragment } from "hono/jsx";
 
 const DiscordEmbed = ({ data }: { data: AdaptedItemDetails }) => {
+  // Format the numbers
   const likes = formatNumber(data.statistics.likes, 1);
   const comments = formatNumber(data.statistics.comments, 1);
 
-  const authorSuffix = data.imagePost ? "slideshow" : "";
+  // Determine the preview component for the media type
   const previewComponent = data.imagePost ? (
     <ImagePreview data={data} />
   ) : (
     <VideoPreview data={data} />
   );
 
+  // Format the headings
+  const authorName = `@${data.author.username}${
+    data.imagePost ? ` (slideshow)` : ""
+  }`;
+  const authorUrl = `https://tiktok.com/@${data.author.username}`;
+
   // noinspection HtmlRequiredTitleElement
   return (
-    <html lang="en">
-      <head>
-        {/* Site Metadata */}
-        <meta property="og:title" content={`❤️ ${likes} 💬 ${comments}`} />
-        <meta property="og:site_name" content="TikTxk - Prettier Embeds" />
-        <meta
-          property="theme-color"
-          content={Math.random() > 0.5 ? "#69C9D0" : "#EE1D52"}
-        />
-
-        {/* Preview Metadata */}
-        {previewComponent}
-
-        {/* The additional oembed is pulled by Discord to enable improved embeds. */}
-        <link
-          rel="alternate"
-          href={`${Constants.HOST_URL}/internal/embed?username=${data.author.username}&authorSuffix=${authorSuffix}`}
-          type="application/json+oembed"
-        />
-      </head>
-    </html>
+    <GenericDiscordEmbed
+      author={{ name: authorName, url: authorUrl }}
+      title={`❤️ ${likes} 💬 ${comments}`}
+      url={`https://tiktok.com/@${data.author.username}/video/${data.id}`}
+      component={previewComponent}
+    />
   );
 };
 
 const VideoPreview = ({ data }: { data: AdaptedItemDetails }) => (
-  <div>
+  <Fragment>
     <meta
       property="og:video"
       content={`${Constants.HOST_URL}/meta/${data.id}/video`}
@@ -72,12 +64,12 @@ const VideoPreview = ({ data }: { data: AdaptedItemDetails }) => (
     <meta property="og:video:width" content={data.video.width} />
     <meta property="og:video:height" content={data.video.height} />
     <meta property="og:type" content="video.other" />
-  </div>
+  </Fragment>
 );
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ImagePreview = ({ data }: { data: AdaptedItemDetails }) => (
-  <div>
+  <Fragment>
     <meta
       property="og:image"
       content={`${Constants.HOST_URL}/meta/${data.id}/image`}
@@ -90,31 +82,22 @@ const ImagePreview = ({ data }: { data: AdaptedItemDetails }) => (
     />
     <meta property="og:type" content="image.other" />
     <meta property="twitter:card" content="summary_large_image" />
-  </div>
+  </Fragment>
 );
 
 export const addTikTokRoutes = (app: Hono) => {
   const videoIdRegex = /https:\/\/www\.tiktok\.com\/@[^/]+\/video\/(\d+)/;
 
   // Main renderer
-  const render = (c: Context, data: AdaptedItemDetails) => {
-    const raw = c.req.query("raw") === "true";
-
-    // Discord embed rendering
-    if (c.req.header("User-Agent")?.includes("Discordbot/2.0") && !raw) {
-      return c.html(<DiscordEmbed data={data} />);
-    }
-
-    // Redirect if raw
-    if (raw) {
-      return c.redirect(data.video.url);
-    }
-
-    // Normal redirect
-    return c.redirect(
-      `https://www.tiktok.com/@${data.author.username}/video/${data.id}`,
+  const render = (c: Context, data: AdaptedItemDetails) =>
+    respondDiscord(
+      c,
+      () => <DiscordEmbed data={data} />,
+      () =>
+        c.redirect(
+          `https://www.tiktok.com/@${data.author.username}/video/${data.id}`,
+        ),
     );
-  };
 
   // E.g. https://www.tiktok.com/@username/video/1234567891234567891
   const handleUsernameVideo: Handler = async (c) => {
@@ -123,7 +106,7 @@ export const addTikTokRoutes = (app: Hono) => {
 
     // Lookup details
     const details = await tiktok.details(videoId);
-    if (!details) throw new StatusError(404, "Video not found");
+    if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
     return render(c, details);
   };
@@ -140,12 +123,14 @@ export const addTikTokRoutes = (app: Hono) => {
       // Parse video ID from url
       const match = videoIdRegex.exec(res.url);
       if (!match) {
-        throw new StatusError(404);
+        throw new StatusError(400, "FAILED_TO_PARSE_VIDEO_ID");
       }
 
       // Lookup details
       const details = await tiktok.details(match[1]);
-      if (!details) throw new StatusError(404, "Video not found");
+      if (!details) {
+        throw new StatusError(404, "UNKNOWN_AWEME");
+      }
 
       return render(c, details);
     };

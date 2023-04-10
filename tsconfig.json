@@ -14,9 +14,9 @@
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
-    "jsx": "react",
-    "jsxFactory": "jsx",
+    "jsx": "react-jsx",
     "jsxFragmentFactory": "Fragment",
+    "jsxImportSource": "hono/jsx",
     "types": [
       "@cloudflare/workers-types"
     ],

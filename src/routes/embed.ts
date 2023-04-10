@@ -21,15 +21,13 @@ import { StatusError } from "@/types/cloudflare";
 
 export const addEmbedRoutes = (app: Hono) => {
   app.get("/internal/embed", async (c) => {
-    const username = c.req.query("username");
-    if (!username) throw new StatusError(400, "Missing username");
+    const authorName = c.req.query("authorName");
+    if (!authorName) throw new StatusError(400, "Missing authorName");
 
-    const authorSuffix = c.req.query("authorSuffix");
+    const authorUrl = c.req.query("authorUrl");
     return c.json({
-      author_name: `@${username}${
-        authorSuffix && authorSuffix.length ? ` (${authorSuffix})` : ""
-      }`,
-      author_url: `https://tiktok.com/@${username}`,
+      author_name: authorName,
+      author_url: authorUrl,
       provider_name: "TikTxk - Embed using s/o/x",
       provider_url: "https://github.com/britmoji/tiktxk",
       title: "TikTok Embed",

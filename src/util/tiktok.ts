@@ -32,99 +32,127 @@ class TikTokAPI extends APIClient {
     };
   }
 
+  /**
+   * Fetch the item details of a public TikTok, either from the
+   * internal API, or fallback to the public API.
+   *
+   * @param videoID The video ID
+   */
   async details(videoID: string): Promise<AdaptedItemDetails | undefined> {
-    try {
-      // Fetch internal details
-      const internal = await this.internalDetails(videoID);
-      const details = internal.aweme_list[0];
-      if (!details) return undefined;
+    // Fetch internal details
+    const internal = await this.internalDetails(videoID);
+    const internalDetails = internal?.aweme_list.filter(
+      (value) => value.aweme_id === videoID,
+    )[0];
 
-      const videoPlayUrls = details?.video?.play_addr.url_list ?? [];
-      const audioPlayUrls = details?.music?.play_url.url_list ?? [];
-
-      const thumbnail =
-        details.image_post_info?.images[0]?.display_image?.url_list ||
-        details.video?.cover?.url_list ||
-        [];
-
-      // Adapt the data
-      return {
-        id: details.aweme_id,
-        video: {
-          url: videoPlayUrls[videoPlayUrls?.length - 1],
-          height: details.video?.play_addr.height ?? 1080,
-          width: details.video?.play_addr.width ?? 1920,
-        },
-        image: {
-          url: thumbnail[thumbnail?.length - 1],
-        },
-        audio: {
-          url: audioPlayUrls[audioPlayUrls?.length - 1],
-        },
-        author: {
-          username: details.author?.unique_id,
-        },
-        statistics: {
-          likes: details.statistics?.digg_count ?? 0,
-          comments: details.statistics?.comment_count ?? 0,
-        },
-        imagePost: details.image_post_info
-          ? {
-              images: details.image_post_info.images.map((image) => ({
-                url: image.display_image.url_list[0],
-                width: image.display_image.width,
-                height: image.display_image.height,
-              })),
-            }
-          : undefined,
-        src: {
-          type: "internal",
-          data: details,
-        },
-      };
-    } catch (e) {
-      // If the internal details fail, fallback to the public details
+    // If the internal details fail, fallback to the public details
+    if (!internalDetails) {
       const item = await this.publicDetails(videoID);
-      if (!item) return undefined;
-
-      // Adapt the data
-      return {
-        id: item.itemInfo.itemStruct.id,
-        video: {
-          url: item.itemInfo.itemStruct.video.downloadAddr,
-          height: item.itemInfo.itemStruct.video.height,
-          width: item.itemInfo.itemStruct.video.width,
-        },
-        image: {
-          url: item.itemInfo.itemStruct.video.cover,
-        },
-        audio: {
-          url: item.itemInfo.itemStruct.music.playUrl,
-        },
-        author: {
-          username: item.itemInfo.itemStruct.author.uniqueId,
-        },
-        statistics: {
-          likes: item.itemInfo.itemStruct.stats.diggCount,
-          comments: item.itemInfo.itemStruct.stats.commentCount,
-        },
-        src: {
-          type: "public",
-          data: item,
-        },
-      };
+      if (!item || !item.itemInfo) return undefined;
+      return this.adaptPublic(item);
     }
+
+    return this.adaptInternal(internalDetails);
+  }
+
+  /**
+   * Parse the internal APIs aweme details into our
+   * generic format.
+   *
+   * @param details The aweme details
+   * @private Internal use only
+   */
+  private adaptInternal(details: Aweme): AdaptedItemDetails {
+    const videoPlayUrls = details?.video?.play_addr.url_list ?? [];
+    const audioPlayUrls = details?.music?.play_url.url_list ?? [];
+
+    const thumbnail =
+      details.image_post_info?.images[0]?.display_image?.url_list ||
+      details.video?.cover?.url_list ||
+      [];
+
+    // Adapt the data
+    return {
+      id: details.aweme_id,
+      video: {
+        url: videoPlayUrls[videoPlayUrls?.length - 1],
+        height: details.video?.play_addr.height ?? 1080,
+        width: details.video?.play_addr.width ?? 1920,
+      },
+      image: {
+        url: thumbnail[thumbnail?.length - 1],
+      },
+      audio: {
+        url: audioPlayUrls[audioPlayUrls?.length - 1],
+      },
+      author: {
+        username: details.author?.unique_id,
+      },
+      statistics: {
+        likes: details.statistics?.digg_count ?? 0,
+        comments: details.statistics?.comment_count ?? 0,
+      },
+      imagePost: details.image_post_info
+        ? {
+            images: details.image_post_info.images.map((image) => ({
+              url: image.display_image.url_list[0],
+              width: image.display_image.width,
+              height: image.display_image.height,
+            })),
+          }
+        : undefined,
+      src: {
+        type: "internal",
+        data: details,
+      },
+    };
+  }
+
+  /**
+   * Parse the public APIs item details into our
+   * generic format.
+   *
+   * @param item The item details
+   * @private Internal use only
+   */
+  private adaptPublic(item: PublicItemDetails): AdaptedItemDetails {
+    // Adapt the data
+    return {
+      id: item.itemInfo.itemStruct.id,
+      video: {
+        url: item.itemInfo.itemStruct.video.downloadAddr,
+        height: item.itemInfo.itemStruct.video.height,
+        width: item.itemInfo.itemStruct.video.width,
+      },
+      image: {
+        url: item.itemInfo.itemStruct.video.cover,
+      },
+      audio: {
+        url: item.itemInfo.itemStruct.music.playUrl,
+      },
+      author: {
+        username: item.itemInfo.itemStruct.author.uniqueId,
+      },
+      statistics: {
+        likes: item.itemInfo.itemStruct.stats.diggCount,
+        comments: item.itemInfo.itemStruct.stats.commentCount,
+      },
+      src: {
+        type: "public",
+        data: item,
+      },
+    };
   }
 
   async publicDetails(videoID: string): Promise<PublicItemDetails> {
     return this.get(`/item/detail/?itemId=${videoID}`);
   }
 
-  async internalDetails(videoID: string): Promise<InternalItemDetail> {
+  async internalDetails(
+    videoID: string,
+  ): Promise<InternalItemDetail | undefined> {
     // Throw if the video ID is not a number
-    if (isNaN(Number(videoID))) {
-      throw new Error("Invalid video ID");
-    }
+    if (isNaN(Number(videoID))) return undefined;
 
     // Based off yt-dlp tiktok extractor. https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/tiktok.py
     // Turns out the only parameter you need is aid (which appears to influence some fields in the output,
@@ -211,7 +239,7 @@ class TikTokAPI extends APIClient {
       return res.json();
     }
 
-    throw new Error("Failed to fetch internal details");
+    return undefined;
   }
 }
 

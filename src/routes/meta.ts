@@ -25,7 +25,7 @@ export const addMetaRoutes = (app: Hono) => {
   app.get("/meta/:videoId/video", async (c) => {
     const videoId = c.req.param("videoId");
     const details = await tiktok.details(videoId);
-    if (!details) throw new StatusError(404);
+    if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
     return c.redirect(details.video.url);
   });
@@ -34,7 +34,7 @@ export const addMetaRoutes = (app: Hono) => {
   app.get("/meta/:videoId/image", async (c) => {
     const videoId = c.req.param("videoId");
     const details = await tiktok.details(videoId);
-    if (!details) throw new StatusError(404);
+    if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
     if (details.imagePost?.images?.length) {
       return c.redirect(details.imagePost.images[0].url);
@@ -47,7 +47,7 @@ export const addMetaRoutes = (app: Hono) => {
   app.get("/meta/:videoId/audio", async (c) => {
     const videoId = c.req.param("videoId");
     const details = await tiktok.details(videoId);
-    if (!details) throw new StatusError(404);
+    if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
     return c.redirect(details.audio.url);
   });
@@ -56,7 +56,7 @@ export const addMetaRoutes = (app: Hono) => {
   app.get("/meta/:videoId", async (c) => {
     const videoId = c.req.param("videoId");
     const details = await tiktok.details(videoId);
-    if (!details) throw new StatusError(404);
+    if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
     return c.json(details);
   });

@@ -27,10 +27,12 @@ import { addEmbedRoutes } from "@/routes/embed";
 import { addMetaRoutes } from "@/routes/meta";
 import { Constants } from "./constants";
 import Toucan from "toucan-js";
+import { prettyJSON } from "hono/pretty-json";
+import { GenericDiscordEmbed, isDiscord } from "@/util/discord";
 
 const app = new Hono();
 
-app.use("*", etag(), logger());
+app.use("*", etag(), logger(), prettyJSON());
 
 // Add routes
 addIndexRoutes(app);
@@ -45,16 +47,61 @@ trying to embed a TikTok video. We don't support slideshows or LIVE videos, and 
 show videos that are private, or have been deleted. Sorry! Something wrong? 
 Open an issue on GitHub at ${Constants.HOST_URL}/issue <3`.replace(/\s+/g, " ");
 
-app.notFound(() => {
-  throw new StatusError(404);
-});
+const handle404: Parameters<typeof app.notFound>["0"] = (c) =>
+  c.json({
+    message: "Not Found",
+    success: false,
+
+    routes: app.routes
+      .filter((r) => r.path !== "*")
+      .map((r) => ({
+        path: r.path,
+        method: r.method,
+      })),
+  });
+
+app.notFound(handle404);
 
 app.onError((err, c) => {
+  // Create a random identifiable error ID
+  const requestId = Array.from(Array(10), () =>
+    Math.floor(Math.random() * 36).toString(36),
+  ).join("");
+
   if (err instanceof StatusError) {
-    c.status(<StatusCode>err.status);
+    // If the request is from Discord, we should render an embed
+    // as the response
+    if (isDiscord(c.req)) {
+      return c.html(
+        <GenericDiscordEmbed
+          title="TikTxk - Error"
+          description={err.message}
+          color="#f44336"
+        />,
+      );
+    }
+
+    // If the error is a 404, handle it as such
+    if (err.status == 404) return handle404(c) as Response;
+
+    // Otherwise just set the status code
+    c.status(err.status as StatusCode);
   } else {
+    // If the error is not a StatusError, log it to the console
     console.error(err);
-    c.status(500);
+
+    // Handle Discord embeds
+    if (isDiscord(c.req)) {
+      c.html(
+        <GenericDiscordEmbed
+          title="TikTxk - Error"
+          description={`A fatal error occurred while processing your request. Please try again later. If this error persists, please open an issue on GitHub at ${Constants.HOST_URL}/issue. Error ID: ${requestId}.`}
+          color="#f44336"
+        />,
+      );
+    } else {
+      c.status(500);
+    }
   }
 
   if (c.env.SENTRY_DSN) {
@@ -66,6 +113,7 @@ app.onError((err, c) => {
         allowedSearchParams: /(.*)/,
       });
 
+      sentry.setExtra("request_id", requestId);
       sentry.captureException(err);
     } catch (e) {
       console.error("Failed to send error to Sentry", e);
