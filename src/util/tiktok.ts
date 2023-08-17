@@ -95,7 +95,9 @@ class TikTokAPI extends APIClient {
       imagePost: details.image_post_info
         ? {
             images: details.image_post_info.images.map((image) => ({
-              url: image.display_image.url_list[0],
+              url: image.display_image.url_list[
+                image.display_image.url_list.length - 1
+              ],
               width: image.display_image.width,
               height: image.display_image.height,
             })),
