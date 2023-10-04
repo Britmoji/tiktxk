@@ -241,7 +241,9 @@ class TikTokAPI extends APIClient {
         },
       );
 
-      if (res.headers.get("Content-Length") === "0") continue;
+      if (res.headers.get("Content-Length") === "0") {
+        continue;
+      }
       return res.json();
     }
 
