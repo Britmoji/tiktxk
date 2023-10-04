@@ -106,7 +106,9 @@ export const addTikTokRoutes = (app: Hono) => {
 
     // Lookup details
     const details = await tiktok.details(videoId);
-    if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
+    if (!details) {
+      throw new StatusError(404, "UNKNOWN_AWEME");
+    }
 
     return render(c, details);
   };
