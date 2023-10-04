@@ -43,8 +43,8 @@ addTikTokRoutes(app);
 // Add error handlers
 const errorComment =
   `If you're here, and have no idea what this nerd shit is, something went wrong when
-trying to embed a TikTok video. We don't support slideshows or LIVE videos, and we can't 
-show videos that are private, or have been deleted. Sorry! Something wrong? 
+trying to embed a TikTok video. We don't support slideshows or LIVE videos, and we can't
+show videos that are private, or have been deleted. Sorry! Something wrong?
 Open an issue on GitHub at ${Constants.HOST_URL}/issue <3`.replace(/\s+/g, " ");
 
 const handle404: Parameters<typeof app.notFound>["0"] = (c) =>
@@ -82,7 +82,9 @@ app.onError((err, c) => {
     }
 
     // If the error is a 404, handle it as such
-    if (err.status == 404) return handle404(c) as Response;
+    if (err.status == 404) {
+      return handle404(c) as Response;
+    }
 
     // Otherwise just set the status code
     c.status(err.status as StatusCode);
