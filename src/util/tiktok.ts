@@ -156,7 +156,9 @@ class TikTokAPI extends APIClient {
     videoID: string,
   ): Promise<InternalItemDetail | undefined> {
     // Throw if the video ID is not a number
-    if (isNaN(Number(videoID))) return undefined;
+    if (isNaN(Number(videoID))) {
+      return undefined;
+    }
 
     // Based off yt-dlp tiktok extractor. https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/tiktok.py
     // Turns out the only parameter you need is aid (which appears to influence some fields in the output,
