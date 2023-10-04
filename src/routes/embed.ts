@@ -22,7 +22,9 @@ import { StatusError } from "@/types/cloudflare";
 export const addEmbedRoutes = (app: Hono) => {
   app.get("/internal/embed", async (c) => {
     const authorName = c.req.query("authorName");
-    if (!authorName) throw new StatusError(400, "Missing authorName");
+    if (!authorName) {
+      throw new StatusError(400, "Missing authorName");
+    }
 
     const authorUrl = c.req.query("authorUrl");
     return c.json({
