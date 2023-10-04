@@ -51,7 +51,9 @@ export const addMetaRoutes = (app: Hono) => {
   app.get("/meta/:videoId/audio", async (c) => {
     const videoId = c.req.param("videoId");
     const details = await tiktok.details(videoId);
-    if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
+    if (!details) {
+      throw new StatusError(404, "UNKNOWN_AWEME");
+    }
 
     return c.redirect(details.audio.url);
   });
