@@ -48,7 +48,9 @@ class TikTokAPI extends APIClient {
     // If the internal details fail, fallback to the public details
     if (!internalDetails) {
       const item = await this.publicDetails(videoID);
-      if (!item || !item.itemInfo) return undefined;
+      if (!item || !item.itemInfo) {
+        return undefined;
+      }
       return this.adaptPublic(item);
     }
 
