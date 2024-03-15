@@ -104,11 +104,12 @@ app.onError((err, c) => {
     }
   }
 
-  if (c.env.SENTRY_DSN) {
+  if (c.env.SENTRY_DSN && !(err instanceof StatusError)) {
     try {
       const sentry = new Toucan({
         dsn: c.env.SENTRY_DSN,
         context: c.executionCtx,
+        request: c.req,
         allowedHeaders: ["User-Agent"],
         allowedSearchParams: /(.*)/,
       });
