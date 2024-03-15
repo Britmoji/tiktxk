@@ -220,7 +220,7 @@ class TikTokAPI extends APIClient {
       });
 
       const res = await fetch(
-        `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?${queryString.toString()}`,
+        `https://api22-normal-c-useast2a.tiktokv.com/aweme/v1/feed/?${queryString.toString()}`,
         {
           headers: {
             "User-Agent":
