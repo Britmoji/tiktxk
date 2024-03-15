@@ -31,9 +31,9 @@ export const addIndexRoutes = (app: Hono) => {
       c,
       () => ({
         title: "Report an issue",
-        description: `To report an issue, go to ${Constants.HOST_URL}/issue. (Or click the blue link)`,
+        description: "To report an issue, go to https://github.com/Britmoji/tiktxk/issues/new. (Or click the blue link)",
       }),
-      () => c.redirect(`${Constants.HOST_URL}/issue`),
+      () => c.redirect("https://github.com/Britmoji/tiktxk/issues/new"),
     ),
   );
 };
