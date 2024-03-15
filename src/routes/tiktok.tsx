@@ -31,10 +31,15 @@ const DiscordEmbed = ({ data }: { data: AdaptedItemDetails }) => {
   const comments = formatNumber(data.statistics.comments, 1);
 
   // Determine the preview component for the media type
-  const previewComponent = data.imagePost ? (
-    <ImagePreview data={data} />
-  ) : (
-    <VideoPreview data={data} />
+  const previewComponent = (
+    <Fragment>
+      {!data.imagePost && <VideoPreview tiktok={data} />}
+      {data.imagePost
+        ? data.imagePost.images
+            .slice(0, 4) // Only show the first 4 images
+            .map((_, index) => <ImagePreview tiktok={data} index={index} />)
+        : null}
+    </Fragment>
   );
 
   // Format the headings
@@ -54,31 +59,40 @@ const DiscordEmbed = ({ data }: { data: AdaptedItemDetails }) => {
   );
 };
 
-const VideoPreview = ({ data }: { data: AdaptedItemDetails }) => (
+const VideoPreview = ({ tiktok }: { tiktok: AdaptedItemDetails }) => (
   <Fragment>
     <meta
       property="og:video"
-      content={`${Constants.HOST_URL}/meta/${data.id}/video`}
+      content={`${Constants.HOST_URL}/meta/${tiktok.id}/video`}
     />
     <meta property="og:video:type" content={`video/mp4`} />
-    <meta property="og:video:width" content={data.video.width} />
-    <meta property="og:video:height" content={data.video.height} />
+    <meta property="og:video:width" content={tiktok.video.width} />
+    <meta property="og:video:height" content={tiktok.video.height} />
     <meta property="og:type" content="video.other" />
   </Fragment>
 );
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const ImagePreview = ({ data }: { data: AdaptedItemDetails }) => (
+const ImagePreview = ({
+  tiktok,
+  index,
+}: {
+  tiktok: AdaptedItemDetails;
+  index: number;
+}) => (
   <Fragment>
     <meta
       property="og:image"
-      content={`${Constants.HOST_URL}/meta/${data.id}/image`}
+      content={`${Constants.HOST_URL}/meta/${tiktok.id}/image/${index}`}
     />
     <meta property="og:image:type" content={`image/jpeg`} />
-    <meta property="og:image:width" content={data.imagePost?.images[0].width} />
+    <meta
+      property="og:image:width"
+      content={tiktok.imagePost?.images[index].width}
+    />
     <meta
       property="og:image:height"
-      content={data.imagePost?.images[0].height}
+      content={tiktok.imagePost?.images[index].height}
     />
     <meta property="og:type" content="image.other" />
     <meta property="twitter:card" content="summary_large_image" />
@@ -86,7 +100,8 @@ const ImagePreview = ({ data }: { data: AdaptedItemDetails }) => (
 );
 
 export const addTikTokRoutes = (app: Hono) => {
-  const videoIdRegex = /https:\/\/www\.tiktok\.com\/@[^/]+\/video\/(\d+)/;
+  const videoIdRegex =
+    /https:\/\/www\.tiktok\.com\/@[^/]+\/(video|photo)\/(?<id>\d+)/;
 
   // Main renderer
   const render = (c: Context, data: AdaptedItemDetails) =>
@@ -122,12 +137,13 @@ export const addTikTokRoutes = (app: Hono) => {
 
       // Parse video ID from url
       const match = videoIdRegex.exec(res.url);
-      if (!match) {
+      console.log(match);
+      if (!match || !match.groups) {
         throw new StatusError(400, "FAILED_TO_PARSE_VIDEO_ID");
       }
 
       // Lookup details
-      const details = await tiktok.details(match[1]);
+      const details = await tiktok.details(match.groups?.id);
       if (!details) {
         throw new StatusError(404, "UNKNOWN_AWEME");
       }

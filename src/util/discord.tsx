@@ -81,7 +81,8 @@ export const GenericDiscordEmbed = (embed: DiscordEmbedData) => {
  */
 export const isDiscord = (req: Request): boolean => {
   const raw = req.query("raw") === "true";
-  return req.header("User-Agent")?.includes("Discordbot") && !raw;
+  return true;
+  // return req.header("User-Agent")?.includes("Discordbot") && !raw;
 };
 
 /**

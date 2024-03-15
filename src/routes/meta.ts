@@ -31,13 +31,14 @@ export const addMetaRoutes = (app: Hono) => {
   });
 
   // Image metadata
-  app.get("/meta/:videoId/image", async (c) => {
+  app.get("/meta/:videoId/image/:index", async (c) => {
     const videoId = c.req.param("videoId");
+    const index = parseInt(c.req.param("index")) || 0;
     const details = await tiktok.details(videoId);
     if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
     if (details.imagePost?.images?.length) {
-      return c.redirect(details.imagePost.images[0].url);
+      return c.redirect(details.imagePost.images[index].url);
     }
 
     return c.redirect(details.image.url);
