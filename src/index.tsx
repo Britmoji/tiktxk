@@ -19,18 +19,18 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { etag } from "hono/etag";
-import { StatusError } from "./types/cloudflare";
+import { Bindings, StatusError } from "./types/cloudflare";
 import { StatusCode } from "hono/utils/http-status";
 import { addTikTokRoutes } from "./routes/tiktok";
 import { addIndexRoutes } from "./routes";
 import { addEmbedRoutes } from "@/routes/embed";
 import { addMetaRoutes } from "@/routes/meta";
 import { Constants } from "./constants";
-import Toucan from "toucan-js";
+import { Toucan } from "toucan-js";
 import { prettyJSON } from "hono/pretty-json";
 import { GenericDiscordEmbed, isDiscord } from "@/util/discord";
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Bindings }>();
 
 app.use("*", etag(), logger(), prettyJSON());
 
@@ -104,14 +104,12 @@ app.onError((err, c) => {
     }
   }
 
-  if (c.env.SENTRY_DSN && !(err instanceof StatusError)) {
+  if (c.env?.SENTRY_DSN && !(err instanceof StatusError)) {
     try {
       const sentry = new Toucan({
         dsn: c.env.SENTRY_DSN,
         context: c.executionCtx,
-        request: c.req,
-        allowedHeaders: ["User-Agent"],
-        allowedSearchParams: /(.*)/,
+        request: c.req.raw,
       });
 
       sentry.setExtra("request_id", requestId);

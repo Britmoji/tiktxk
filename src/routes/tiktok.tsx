@@ -19,13 +19,13 @@
 import { Context, Handler, Hono } from "hono";
 import { AdaptedItemDetails, tiktok } from "@/util/tiktok";
 import { get } from "@/util/http";
-import { StatusError } from "@/types/cloudflare";
+import { Bindings, StatusError } from "@/types/cloudflare";
 import { formatNumber } from "@/util/numbers";
 import { Constants } from "@/constants";
 import { GenericDiscordEmbed, respondDiscord } from "@/util/discord";
-import { Fragment } from "hono/jsx";
+import { FC, Fragment } from "hono/jsx";
 
-const DiscordEmbed = ({ data }: { data: AdaptedItemDetails }) => {
+const DiscordEmbed: FC<{ data: AdaptedItemDetails }> = ({ data }) => {
   // Format the numbers
   const likes = formatNumber(data.statistics.likes, 1);
   const comments = formatNumber(data.statistics.comments, 1);
@@ -66,8 +66,11 @@ const VideoPreview = ({ tiktok }: { tiktok: AdaptedItemDetails }) => (
       content={`${Constants.HOST_URL}/meta/${tiktok.id}/video`}
     />
     <meta property="og:video:type" content={`video/mp4`} />
-    <meta property="og:video:width" content={tiktok.video.width} />
-    <meta property="og:video:height" content={tiktok.video.height} />
+    <meta property="og:video:width" content={tiktok.video.width?.toString()} />
+    <meta
+      property="og:video:height"
+      content={tiktok.video.height?.toString()}
+    />
     <meta property="og:type" content="video.other" />
   </Fragment>
 );
@@ -88,18 +91,18 @@ const ImagePreview = ({
     <meta property="og:image:type" content={`image/jpeg`} />
     <meta
       property="og:image:width"
-      content={tiktok.imagePost?.images[index].width}
+      content={tiktok.imagePost?.images[index].width?.toString()}
     />
     <meta
       property="og:image:height"
-      content={tiktok.imagePost?.images[index].height}
+      content={tiktok.imagePost?.images[index].height?.toString()}
     />
     <meta property="og:type" content="image.other" />
     <meta property="twitter:card" content="summary_large_image" />
   </Fragment>
 );
 
-export const addTikTokRoutes = (app: Hono) => {
+export const addTikTokRoutes = (app: Hono<{ Bindings: Bindings }>) => {
   const videoIdRegex =
     /https:\/\/www\.tiktok\.com\/@[^/]+\/(video|photo)\/(?<id>\d+)/;
 
@@ -137,7 +140,6 @@ export const addTikTokRoutes = (app: Hono) => {
 
       // Parse video ID from url
       const match = videoIdRegex.exec(res.url);
-      console.log(match);
       if (!match || !match.groups) {
         throw new StatusError(400, "FAILED_TO_PARSE_VIDEO_ID");
       }

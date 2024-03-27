@@ -15,7 +15,6 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "jsx": "react-jsx",
-    "jsxFragmentFactory": "Fragment",
     "jsxImportSource": "hono/jsx",
     "types": [
       "@cloudflare/workers-types"

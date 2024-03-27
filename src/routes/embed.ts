@@ -17,9 +17,9 @@
  */
 
 import { Hono } from "hono";
-import { StatusError } from "@/types/cloudflare";
+import { Bindings, StatusError } from "@/types/cloudflare";
 
-export const addEmbedRoutes = (app: Hono) => {
+export const addEmbedRoutes = (app: Hono<{ Bindings: Bindings }>) => {
   app.get("/internal/embed", async (c) => {
     const authorName = c.req.query("authorName");
     if (!authorName) throw new StatusError(400, "Missing authorName");

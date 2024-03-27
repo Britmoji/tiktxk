@@ -13,15 +13,15 @@
     "lint:eslint:fix": "eslint --fix \"src/**/*.{js,jsx,ts,tsx}\""
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^3.16.0",
-    "@typescript-eslint/eslint-plugin": "^5.38.0",
-    "@typescript-eslint/parser": "^5.38.0",
-    "eslint": "^8.24.0",
-    "eslint-config-prettier": "^8.5.0",
+    "@cloudflare/workers-types": "^4.20240320.1",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^8.10.0",
     "eslint-plugin-prettier": "^4.2.1",
-    "prettier": "^2.7.1",
-    "typescript": "^4.8.3",
-    "wrangler": "2.1.6"
+    "prettier": "^2.8.8",
+    "typescript": "^4.9.5",
+    "wrangler": "^3.38.0"
   },
   "homepage": "https://github.com/Britmoji/tiktxk#readme",
   "author": "Britmoji Incorporated <hello@zerite.dev>",
@@ -33,7 +33,7 @@
     "url": "https://github.com/Britmoji/tiktxk/issues"
   },
   "dependencies": {
-    "hono": "^2.2.1",
-    "toucan-js": "^2.7.0"
+    "hono": "^4.1.4",
+    "toucan-js": "^3.3.1"
   }
 }

@@ -17,6 +17,7 @@
  */
 
 import { USER_AGENT } from "./tiktok";
+import { Context } from "hono";
 
 // I am not a 🤖
 export const get = async (url: string) => {
@@ -25,4 +26,9 @@ export const get = async (url: string) => {
       "User-Agent": USER_AGENT,
     },
   });
+};
+
+export const getBaseURL = (ctx: Context) => {
+  const url = new URL(ctx.req.url);
+  return `https://${url.host}`;
 };

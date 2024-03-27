@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { respondDiscord } from "@/util/discord";
-import { Constants } from "@/constants";
+import { getBaseURL } from "@/util/http";
+import { Bindings } from "@/types/cloudflare";
 
-export const addIndexRoutes = (app: Hono) => {
+export const addIndexRoutes = (app: Hono<{ Bindings: Bindings }>) => {
   // Home page
   app.get("/", (c) =>
     respondDiscord(
@@ -31,9 +32,11 @@ export const addIndexRoutes = (app: Hono) => {
       c,
       () => ({
         title: "Report an issue",
-        description: `To report an issue, go to ${Constants.HOST_URL}/issue. (Or click the blue link)`,
+        description: `To report an issue, go to ${getBaseURL(
+          c,
+        )}/issue. (Or click the blue link)`,
       }),
-      () => c.redirect(`${Constants.HOST_URL}/issue`),
+      () => c.redirect(`${getBaseURL(c)}/issue`),
     ),
   );
 };

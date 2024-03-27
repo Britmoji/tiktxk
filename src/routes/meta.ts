@@ -18,9 +18,9 @@
 
 import { Hono } from "hono";
 import { tiktok } from "@/util/tiktok";
-import { StatusError } from "@/types/cloudflare";
+import { Bindings, StatusError } from "@/types/cloudflare";
 
-export const addMetaRoutes = (app: Hono) => {
+export const addMetaRoutes = (app: Hono<{ Bindings: Bindings }>) => {
   // Video metadata
   app.get("/meta/:videoId/video", async (c) => {
     const videoId = c.req.param("videoId");

@@ -22,6 +22,8 @@ export const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36";
 
 class TikTokAPI extends APIClient {
+  private sessionId?: string;
+
   constructor() {
     super("https://t.tiktok.com/api");
   }
@@ -44,15 +46,18 @@ class TikTokAPI extends APIClient {
     const internalDetails = internal?.aweme_list.filter(
       (value) => value.aweme_id === videoID,
     )[0];
+    console.log(internal);
 
+    // TODO: Public details are just broken
     // If the internal details fail, fallback to the public details
-    if (!internalDetails) {
-      const item = await this.publicDetails(videoID);
-      if (!item || !item.itemInfo) return undefined;
-      return this.adaptPublic(item);
-    }
+    // if (!internalDetails) {
+    //   const item = await this.publicDetails(videoID);
+    //   if (!item || !item.itemInfo) return undefined;
+    //   return this.adaptPublic(item);
+    // }
 
-    return this.adaptInternal(internalDetails);
+    if (internalDetails) return this.adaptInternal(internalDetails);
+    return undefined;
   }
 
   /**
@@ -160,8 +165,7 @@ class TikTokAPI extends APIClient {
     // Turns out the only parameter you need is aid (which appears to influence some fields in the output,
     // maybe for compatibility with older app versions?).
     // The User-Agent isn't strictly required, but some appear to be blacklisted. This one (based off yt-dlp) should be good.
-
-    const aid = "1180";
+    const appName = "musical_ly";
     const appVersions = [
       { version_name: "26.1.3", version_code: "260103" },
       { version_name: "26.1.2", version_code: "260102" },
@@ -172,7 +176,6 @@ class TikTokAPI extends APIClient {
     for (const params of appVersions) {
       const queryString = new URLSearchParams({
         // Required version data for compatibility
-        aid,
         ...params,
 
         // Provide the Aweme ID
@@ -194,18 +197,15 @@ class TikTokAPI extends APIClient {
         _rticket: Math.floor(Date.now()).toString(),
         ts: Math.floor(Date.now() / 1000).toString(),
 
-        // Device meta
-        device_brand: "Google",
-        device_type: "Pixel 4",
-        device_platform: "android",
-        resolution: "1080*1920",
+        // General
+        resolution: "1080*2400",
         dpi: "420",
-        os_version: "10",
+        os_version: "13",
         os_api: "29",
         carrier_region: "US",
         sys_region: "US",
         region: "US",
-        app_name: "trill",
+        app_name: appName,
         app_language: "en",
         language: "en",
         timezone_name: "America/New_York",
@@ -217,14 +217,27 @@ class TikTokAPI extends APIClient {
         ssmix: "a",
         as: "a1qwert123",
         cp: "cbfhckdckkde1",
+
+        // Device meta
+        // Shoutout: https://github.com/yt-dlp/yt-dlp/issues/9506#issuecomment-2020074295
+        iid: "7318518857994389254",
+        device_id: "7318517321748022790",
+        device_type: "ASUS_Z01QD",
+        device_platform: "android",
       });
+
+      const odinTt = [...Array(160)]
+        .map(() => Math.floor(Math.random() * 16).toString(16))
+        .join("");
 
       const res = await fetch(
         `https://api22-normal-c-useast2a.tiktokv.com/aweme/v1/feed/?${queryString.toString()}`,
         {
           headers: {
-            "User-Agent":
-              "com.ss.android.ugc.trill/250602 (Linux; U; Android 10; en_US; Pixel 4; Build/QQ3A.200805.001; Cronet/58.0.2991.0)",
+            // Hello, it's me, a human! 🤖
+            "User-Agent": `com.ss.android.ugc.${appName}/${params.version_code} (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)`,
+
+            Cookie: `odin_tt=${odinTt};`,
           },
           cf: {
             cacheEverything: true,
