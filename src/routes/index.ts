@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { respondDiscord } from "@/util/discord";
-import { Constants } from "@/constants";
+import { getBaseURL } from "@/util/http";
+import { Bindings } from "@/types/cloudflare";
 
-export const addIndexRoutes = (app: Hono) => {
+export const addIndexRoutes = (app: Hono<{ Bindings: Bindings }>) => {
   // Home page
   app.get("/", (c) =>
     respondDiscord(

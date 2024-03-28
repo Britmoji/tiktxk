@@ -26,6 +26,7 @@ export class StatusError extends Error {
       "The video could not be found. Either it was deleted, or TikTok has removed it.",
     FAILED_TO_PARSE_VIDEO_ID:
       "The video ID could not be parsed, is it a valid TikTok URL?",
+    MISSING_VIDEO_ID: "The video ID is missing from the request.",
   };
 
   private static readonly STATUSES = new Map<number, string>([
@@ -47,3 +48,7 @@ export class StatusError extends Error {
     );
   }
 }
+
+export type Bindings = {
+  SENTRY_DSN?: string;
+};

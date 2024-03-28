@@ -16,22 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { APIClient } from "./client";
+import { randomBigInt, randomInt } from "@/util/math";
+import { v4 as uuidv4 } from "uuid";
 
-export const USER_AGENT =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36";
-
-class TikTokAPI extends APIClient {
-  constructor() {
-    super("https://t.tiktok.com/api");
-  }
-
-  async getHeaders(): Promise<Record<string, string>> {
-    return {
-      "User-Agent": USER_AGENT,
-    };
-  }
-
+class TikTokAPI {
   /**
    * Fetch the item details of a public TikTok, either from the
    * internal API, or fallback to the public API.
@@ -45,14 +33,8 @@ class TikTokAPI extends APIClient {
       (value) => value.aweme_id === videoID,
     )[0];
 
-    // If the internal details fail, fallback to the public details
-    if (!internalDetails) {
-      const item = await this.publicDetails(videoID);
-      if (!item || !item.itemInfo) return undefined;
-      return this.adaptPublic(item);
-    }
-
-    return this.adaptInternal(internalDetails);
+    if (internalDetails) return this.adaptInternal(internalDetails);
+    return undefined;
   }
 
   /**
@@ -110,46 +92,6 @@ class TikTokAPI extends APIClient {
     };
   }
 
-  /**
-   * Parse the public APIs item details into our
-   * generic format.
-   *
-   * @param item The item details
-   * @private Internal use only
-   */
-  private adaptPublic(item: PublicItemDetails): AdaptedItemDetails {
-    // Adapt the data
-    return {
-      id: item.itemInfo.itemStruct.id,
-      video: {
-        url: item.itemInfo.itemStruct.video.downloadAddr,
-        height: item.itemInfo.itemStruct.video.height,
-        width: item.itemInfo.itemStruct.video.width,
-      },
-      image: {
-        url: item.itemInfo.itemStruct.video.cover,
-      },
-      audio: {
-        url: item.itemInfo.itemStruct.music.playUrl,
-      },
-      author: {
-        username: item.itemInfo.itemStruct.author.uniqueId,
-      },
-      statistics: {
-        likes: item.itemInfo.itemStruct.stats.diggCount,
-        comments: item.itemInfo.itemStruct.stats.commentCount,
-      },
-      src: {
-        type: "public",
-        data: item,
-      },
-    };
-  }
-
-  async publicDetails(videoID: string): Promise<PublicItemDetails> {
-    return this.get(`/item/detail/?itemId=${videoID}`);
-  }
-
   async internalDetails(
     videoID: string,
   ): Promise<InternalItemDetail | undefined> {
@@ -160,71 +102,95 @@ class TikTokAPI extends APIClient {
     // Turns out the only parameter you need is aid (which appears to influence some fields in the output,
     // maybe for compatibility with older app versions?).
     // The User-Agent isn't strictly required, but some appear to be blacklisted. This one (based off yt-dlp) should be good.
+    const appName = "musical_ly";
+    const appId = 0; //_AID = 0 # aweme = 1128, trill = 1180, musical_ly = 1233, universal = 0;
+    const appVersion = "34.1.2";
+    const appManifestVersion = "2023401020";
+    const userAgent = `com.zhiliaoapp.musically/${appVersion} (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)`;
 
-    const aid = "1180";
-    const appVersions = [
-      { version_name: "26.1.3", version_code: "260103" },
-      { version_name: "26.1.2", version_code: "260102" },
-      { version_name: "26.1.1", version_code: "260101" },
-      { version_name: "25.6.2", version_code: "256202" },
+    // TODO: Cache working app iid
+    const appInstallIds = [
+      "7351144126450059040",
+      "7351149742343391009",
+      "7351153174894626592",
     ];
 
-    for (const params of appVersions) {
+    for (const iid of appInstallIds) {
       const queryString = new URLSearchParams({
-        // Required version data for compatibility
-        aid,
-        ...params,
-
         // Provide the Aweme ID
         aweme_id: videoID,
 
-        // Required headers to spoof the app
-        build_number: params.version_name,
-        manifest_version_code: params.version_code,
-        update_version_code: params.version_code,
+        // App install ID
+        iid,
+        last_install_time: (
+          Math.floor(Date.now() / 1000) - randomInt(86400, 1123200)
+        ).toString(),
 
+        // Versioning
+        aid: appId.toString(),
+        app_name: appName,
+        version_code: appVersion
+          .split(".")
+          .map((v) => v.padStart(2, "0"))
+          .join(""), // 34.1.2 -> 340102
+        version_name: appVersion,
+        manifest_version_code: appManifestVersion,
+        update_version_code: appManifestVersion,
+        ab_version: appVersion,
+        build_number: appVersion,
+
+        // General
+        ssmix: "a",
+        channel: "googleplay",
+        resolution: "1080*2400",
+        dpi: "420",
+        language: "en",
+        os: "android",
+        os_api: "29",
+        os_version: "13",
+        ac: "wifi",
+        is_pad: "0",
+        current_region: "US",
+        app_type: "normal",
+        sys_region: "US",
+        timezone_name: "America/New_York",
+        residence: "US",
+        app_language: "en",
+        timezone_offset: "-14400",
+        host_abi: "armeabi-v7a",
+        locale: "en",
+        ac2: "wifi5g",
+        uoo: "1",
+        op_region: "US",
+        region: "US",
+
+        // Derivative
+        _rticket: Math.floor(Date.now()).toString(),
+        // Random UUID
+        cdid: uuidv4().toString(),
         // Random 16 character hex string
         opeudid: [...Array(16)]
           .map(() => Math.floor(Math.random() * 16).toString(16))
           .join(""),
-
-        // Random 16 character digit string
-        uuid: [...Array(16)].map(() => Math.floor(Math.random() * 10)).join(""),
-
-        _rticket: Math.floor(Date.now()).toString(),
         ts: Math.floor(Date.now() / 1000).toString(),
 
         // Device meta
+        // Shoutout: https://github.com/yt-dlp/yt-dlp/issues/9506#issuecomment-2020074295
+        device_id: randomBigInt(
+          7250000000000000000n,
+          7351147085025500000n,
+        ).toString(),
+        device_type: "Pixel 7",
         device_brand: "Google",
-        device_type: "Pixel 4",
         device_platform: "android",
-        resolution: "1080*1920",
-        dpi: "420",
-        os_version: "10",
-        os_api: "29",
-        carrier_region: "US",
-        sys_region: "US",
-        region: "US",
-        app_name: "trill",
-        app_language: "en",
-        language: "en",
-        timezone_name: "America/New_York",
-        timezone_offset: "-14400",
-        channel: "googleplay",
-        ac: "wifi",
-        mcc_mnc: "310260",
-        is_my_cn: "0",
-        ssmix: "a",
-        as: "a1qwert123",
-        cp: "cbfhckdckkde1",
       });
 
       const res = await fetch(
-        `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?${queryString.toString()}`,
+        `https://api22-normal-c-useast2a.tiktokv.com/aweme/v1/feed/?${queryString.toString()}`,
         {
           headers: {
-            "User-Agent":
-              "com.ss.android.ugc.trill/250602 (Linux; U; Android 10; en_US; Pixel 4; Build/QQ3A.200805.001; Cronet/58.0.2991.0)",
+            // Hello, it's me, a human! 🤖
+            "User-Agent": userAgent,
           },
           cf: {
             cacheEverything: true,
@@ -291,44 +257,6 @@ export interface AssetDetail {
 //endregion
 
 /**
- * Public TikTok API
- */
-//region Public TikTok API
-export interface PublicItemDetails {
-  shareMeta: {
-    desc: string;
-    title: string;
-  };
-  itemInfo: {
-    itemStruct: {
-      id: string;
-      author: {
-        avatarThumb: string;
-        uniqueId: string;
-      };
-      stats: {
-        commentCount: number;
-        diggCount: number;
-        playCount: number;
-        shareCount: number;
-      };
-      video: {
-        downloadAddr: string;
-        cover: string;
-        format: string;
-        height: number;
-        width: number;
-      };
-      music: {
-        playUrl: string;
-      };
-    };
-  };
-}
-
-//endregion
-
-/**
  * Adapted TikTok API
  */
 //region Adapted TikTok API
@@ -359,8 +287,8 @@ export interface AdaptedItemDetails {
   };
 
   src: {
-    type: "internal" | "public";
-    data: Aweme | PublicItemDetails;
+    type: "internal";
+    data: Aweme;
   };
 }
 

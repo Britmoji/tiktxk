@@ -16,13 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { USER_AGENT } from "./tiktok";
+import { Context } from "hono";
 
 // I am not a 🤖
 export const get = async (url: string) => {
   return await fetch(url, {
     headers: {
-      "User-Agent": USER_AGENT,
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
     },
   });
+};
+
+export const getBaseURL = (ctx: Context) => {
+  const url = new URL(ctx.req.url);
+  return `https://${url.host}`;
 };
