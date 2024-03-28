@@ -32,11 +32,9 @@ export const addIndexRoutes = (app: Hono<{ Bindings: Bindings }>) => {
       c,
       () => ({
         title: "Report an issue",
-        description: `To report an issue, go to ${getBaseURL(
-          c,
-        )}/issue. (Or click the blue link)`,
+        description: "To report an issue, go to https://github.com/Britmoji/tiktxk/issues/new. (Or click the blue link)",
       }),
-      () => c.redirect(`${getBaseURL(c)}/issue`),
+      () => c.redirect("https://github.com/Britmoji/tiktxk/issues/new"),
     ),
   );
 };
