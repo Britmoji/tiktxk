@@ -22,10 +22,10 @@ import { get } from "@/util/http";
 import { Bindings, StatusError } from "@/types/cloudflare";
 import { formatNumber } from "@/util/numbers";
 import { Constants } from "@/constants";
-import { GenericDiscordEmbed, respondDiscord } from "@/util/discord";
-import { FC, Fragment } from "hono/jsx";
+import { DiscordEmbedData, respondDiscord } from "@/util/discord";
+import { Fragment } from "hono/jsx";
 
-const DiscordEmbed: FC<{ data: AdaptedItemDetails }> = ({ data }) => {
+const createDiscordEmbed = (data: AdaptedItemDetails): DiscordEmbedData => {
   // Format the numbers
   const likes = formatNumber(data.statistics.likes, 1);
   const comments = formatNumber(data.statistics.comments, 1);
@@ -49,14 +49,12 @@ const DiscordEmbed: FC<{ data: AdaptedItemDetails }> = ({ data }) => {
   const authorUrl = `https://tiktok.com/@${data.author.username}`;
 
   // noinspection HtmlRequiredTitleElement
-  return (
-    <GenericDiscordEmbed
-      author={{ name: authorName, url: authorUrl }}
-      title={`❤️ ${likes} 💬 ${comments}`}
-      url={`https://tiktok.com/@${data.author.username}/video/${data.id}`}
-      component={previewComponent}
-    />
-  );
+  return {
+    author: { name: authorName, url: authorUrl },
+    title: `❤️ ${likes} 💬 ${comments}`,
+    url: `https://tiktok.com/@${data.author.username}/video/${data.id}`,
+    component: previewComponent as unknown as Element | undefined,
+  };
 };
 
 const VideoPreview = ({ tiktok }: { tiktok: AdaptedItemDetails }) => (
@@ -110,7 +108,7 @@ export const addTikTokRoutes = (app: Hono<{ Bindings: Bindings }>) => {
   const render = (c: Context, data: AdaptedItemDetails) =>
     respondDiscord(
       c,
-      () => <DiscordEmbed data={data} />,
+      () => createDiscordEmbed(data),
       () =>
         c.redirect(
           `https://www.tiktok.com/@${data.author.username}/video/${data.id}`,

@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "hono": "^4.1.4",
-    "toucan-js": "^3.3.1"
+    "toucan-js": "^3.3.1",
+    "uuid": "^9.0.1"
   }
 }

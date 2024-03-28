@@ -17,11 +17,10 @@
  */
 
 import { Constants } from "@/constants";
-import { FC, JSXNode } from "hono/jsx";
+import { FC } from "hono/jsx";
 import { Context, HonoRequest } from "hono";
-import { HtmlEscapedString } from "hono/dist/types/utils/html";
 
-type DiscordEmbedData = {
+export type DiscordEmbedData = {
   title?: string;
   color?: string;
   description?: string;
@@ -32,10 +31,12 @@ type DiscordEmbedData = {
     url?: string;
   };
 
-  component?: JSXNode;
+  component?: Element;
 };
 
-export const GenericDiscordEmbed: FC = (embed: DiscordEmbedData) => {
+export const GenericDiscordEmbed: FC<DiscordEmbedData> = (
+  embed: DiscordEmbedData,
+) => {
   // Build the embed url
   const authorName = embed.author?.name ?? "TikTxk";
   const authorUrl = embed.author?.url ?? Constants.HOST_URL;
@@ -43,6 +44,7 @@ export const GenericDiscordEmbed: FC = (embed: DiscordEmbedData) => {
   const url = new URL(`${Constants.HOST_URL}/internal/embed`);
   url.searchParams.set("authorName", authorName);
   url.searchParams.set("authorUrl", authorUrl);
+  console.log(embed);
 
   // noinspection HtmlRequiredTitleElement
   return (
@@ -95,17 +97,11 @@ export const isDiscord = (req: HonoRequest): boolean => {
  */
 export const respondDiscord = (
   ctx: Context,
-  embed: () => DiscordEmbedData | JSX.Element,
+  embed: () => DiscordEmbedData,
   handler: () => Response | Promise<Response>,
 ): Response | Promise<Response> => {
   if (isDiscord(ctx.req)) {
-    // Get the embed data
-    const data = embed();
-
-    // noinspection SuspiciousTypeOfGuard
-    return ctx.html(
-      typeof data === "string" ? data : <GenericDiscordEmbed {...data} />,
-    );
+    return ctx.html(<GenericDiscordEmbed {...embed()} />);
   } else {
     return handler();
   }

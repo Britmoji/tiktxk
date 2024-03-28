@@ -1,6 +1,6 @@
 /*
  * tiktxk - Open Source, Privacy First TikTok Embeds
- * Copyright (C) 2022 Britmoji
+ * Copyright (C) 2024 Britmoji
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -16,6 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-export const Constants = {
-  HOST_URL: "https://tiktxk.com",
-};
+export const randomInt = (min: number, max: number) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
+
+export const randomBigInt = (min: bigint, max: bigint) =>
+  BigInt(
+    Math.floor(Math.random() * (Number(max) - Number(min) + 1)) + Number(min),
+  );
