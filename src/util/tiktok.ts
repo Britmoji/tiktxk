@@ -163,6 +163,7 @@ class TikTokAPI {
         uoo: "1",
         op_region: "US",
         region: "US",
+        carrier_region:"US",
 
         // Derivative
         _rticket: Math.floor(Date.now()).toString(),
