@@ -110,9 +110,7 @@ class TikTokAPI {
 
     // TODO: Cache working app iid
     const appInstallIds = [
-      "7351144126450059040",
-      "7351149742343391009",
-      "7351153174894626592",
+      "7355728856979392262"
     ];
 
     for (const iid of appInstallIds) {
@@ -163,6 +161,7 @@ class TikTokAPI {
         uoo: "1",
         op_region: "US",
         region: "US",
+        carrier_region:"US",
 
         // Derivative
         _rticket: Math.floor(Date.now()).toString(),
@@ -186,7 +185,7 @@ class TikTokAPI {
       });
 
       const res = await fetch(
-        `https://api22-normal-c-useast2a.tiktokv.com/aweme/v1/feed/?${queryString.toString()}`,
+        `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?${queryString.toString()}`,
         {
           headers: {
             // Hello, it's me, a human! 🤖
