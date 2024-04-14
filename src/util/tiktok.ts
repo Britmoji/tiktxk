@@ -110,9 +110,7 @@ class TikTokAPI {
 
     // TODO: Cache working app iid
     const appInstallIds = [
-      "7351144126450059040",
-      "7351149742343391009",
-      "7351153174894626592",
+      "7355728856979392262"
     ];
 
     for (const iid of appInstallIds) {
