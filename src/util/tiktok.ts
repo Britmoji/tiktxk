@@ -185,7 +185,7 @@ class TikTokAPI {
       });
 
       const res = await fetch(
-        `https://api22-normal-c-useast2a.tiktokv.com/aweme/v1/feed/?${queryString.toString()}`,
+        `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?${queryString.toString()}`,
         {
           headers: {
             // Hello, it's me, a human! 🤖
