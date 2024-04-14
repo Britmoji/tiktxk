@@ -109,9 +109,7 @@ class TikTokAPI {
     const userAgent = `com.zhiliaoapp.musically/${appVersion} (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)`;
 
     // TODO: Cache working app iid
-    const appInstallIds = [
-      "7355728856979392262"
-    ];
+    const appInstallIds = ["7355728856979392262"];
 
     for (const iid of appInstallIds) {
       const queryString = new URLSearchParams({
@@ -161,7 +159,7 @@ class TikTokAPI {
         uoo: "1",
         op_region: "US",
         region: "US",
-        carrier_region:"US",
+        carrier_region: "US",
 
         // Derivative
         _rticket: Math.floor(Date.now()).toString(),
