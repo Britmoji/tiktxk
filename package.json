@@ -35,6 +35,7 @@
     "url": "https://github.com/Britmoji/tiktxk/issues"
   },
   "dependencies": {
+    "fetch-cookie": "^3.0.1",
     "hono": "^4.2.4",
     "toucan-js": "^3.3.1",
     "uuid": "^9.0.1"

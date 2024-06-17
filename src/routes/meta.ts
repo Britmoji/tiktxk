@@ -22,19 +22,21 @@ import { Bindings, StatusError } from "@/types/cloudflare";
 
 export const addMetaRoutes = (app: Hono<{ Bindings: Bindings }>) => {
   // Video metadata
-  app.get("/meta/:videoId/video", async (c) => {
+  app.get("/meta/:authorName/:videoId/video", async (c) => {
+    const authorName = c.req.param("authorName");
     const videoId = c.req.param("videoId");
-    const details = await tiktok.details(videoId);
+    const details = await tiktok.details(authorName, videoId);
     if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
     return c.redirect(details.video.url);
   });
 
   // Image metadata
-  app.get("/meta/:videoId/image/:index", async (c) => {
+  app.get("/meta/:authorName/:videoId/image/:index", async (c) => {
+    const authorName = c.req.param("authorName");
     const videoId = c.req.param("videoId");
     const index = parseInt(c.req.param("index")) || 0;
-    const details = await tiktok.details(videoId);
+    const details = await tiktok.details(authorName, videoId);
     if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
     if (details.imagePost?.images?.length) {
@@ -45,18 +47,20 @@ export const addMetaRoutes = (app: Hono<{ Bindings: Bindings }>) => {
   });
 
   // Audio metadata
-  app.get("/meta/:videoId/audio", async (c) => {
+  app.get("/meta/:authorName/:videoId/audio", async (c) => {
+    const authorName = c.req.param("authorName");
     const videoId = c.req.param("videoId");
-    const details = await tiktok.details(videoId);
+    const details = await tiktok.details(authorName, videoId);
     if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
     return c.redirect(details.audio.url);
   });
 
   // All metadata
-  app.get("/meta/:videoId", async (c) => {
+  app.get("/meta/:authorName/:videoId", async (c) => {
+    const authorName = c.req.param("authorName");
     const videoId = c.req.param("videoId");
-    const details = await tiktok.details(videoId);
+    const details = await tiktok.details(authorName, videoId);
     if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
     return c.json(details);

@@ -17,5 +17,5 @@
  */
 
 export const Constants = {
-  HOST_URL: "https://tiktxk.com",
+  HOST_URL: "https://wip.koding.dev",
 };

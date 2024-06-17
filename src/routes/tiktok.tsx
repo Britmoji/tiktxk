@@ -53,6 +53,7 @@ const createDiscordEmbed = (data: AdaptedItemDetails): DiscordEmbedData => {
     author: { name: authorName, url: authorUrl },
     title: `❤️ ${likes} 💬 ${comments}`,
     url: `https://tiktok.com/@${data.author.username}/video/${data.id}`,
+    description: data.description,
     component: previewComponent as unknown as Element | undefined,
   };
 };
@@ -61,7 +62,7 @@ const VideoPreview = ({ tiktok }: { tiktok: AdaptedItemDetails }) => (
   <Fragment>
     <meta
       property="og:video"
-      content={`${Constants.HOST_URL}/meta/${tiktok.id}/video`}
+      content={`${Constants.HOST_URL}/meta/${tiktok.author.username}/${tiktok.id}/video`}
     />
     <meta property="og:video:type" content={`video/mp4`} />
     <meta property="og:video:width" content={tiktok.video.width?.toString()} />
@@ -102,7 +103,7 @@ const ImagePreview = ({
 
 export const addTikTokRoutes = (app: Hono<{ Bindings: Bindings }>) => {
   const videoIdRegex =
-    /https:\/\/www\.tiktok\.com\/@[^/]+\/(video|photo)\/(?<id>\d+)/;
+    /https:\/\/www\.tiktok\.com\/@(?<username>[^/]+)\/(video|photo)\/(?<id>\d+)/;
 
   // Main renderer
   const render = (c: Context, data: AdaptedItemDetails) =>
@@ -117,11 +118,11 @@ export const addTikTokRoutes = (app: Hono<{ Bindings: Bindings }>) => {
 
   // E.g. https://www.tiktok.com/@username/video/1234567891234567891
   const handleUsernameVideo: Handler = async (c) => {
-    // const username = c.req.param("username"); // includes @
+    const username = c.req.param("username").substring(1); // includes @
     const videoId = c.req.param("videoId");
 
     // Lookup details
-    const details = await tiktok.details(videoId);
+    const details = await tiktok.details(username, videoId);
     if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
     return render(c, details);
@@ -143,7 +144,11 @@ export const addTikTokRoutes = (app: Hono<{ Bindings: Bindings }>) => {
       }
 
       // Lookup details
-      const details = await tiktok.details(match.groups?.id);
+      const details = await tiktok.details(
+        match.groups?.username,
+        match.groups?.id,
+      );
+
       if (!details) {
         throw new StatusError(404, "UNKNOWN_AWEME");
       }
@@ -152,8 +157,8 @@ export const addTikTokRoutes = (app: Hono<{ Bindings: Bindings }>) => {
     };
 
   // https://www.tiktok.com/@username/video/1234567891234567891
-  app.get("/*/video/:videoId", handleUsernameVideo);
-  app.get("/*/video/:videoId/", handleUsernameVideo);
+  app.get("/:username/video/:videoId", handleUsernameVideo);
+  app.get("/:username/video/:videoId/", handleUsernameVideo);
 
   // https://vm.tiktok.com/ZTRav7308/
   app.get("/:vmId", handleRedirect("vmId"));

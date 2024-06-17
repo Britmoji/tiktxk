@@ -18,81 +18,138 @@
 
 import { randomBigInt, randomInt } from "@/util/math";
 import { v4 as uuidv4 } from "uuid";
+import { searchJSON, traverseJSON } from "@/util/data";
+import fetchCookie from "fetch-cookie";
 
 class TikTokAPI {
   /**
    * Fetch the item details of a public TikTok, either from the
    * internal API, or fallback to the public API.
    *
+   * @param authorName The author name
    * @param videoID The video ID
    */
-  async details(videoID: string): Promise<AdaptedItemDetails | undefined> {
-    // Fetch internal details
-    const internal = await this.internalDetails(videoID);
-    const internalDetails = internal?.aweme_list.filter(
-      (value) => value.aweme_id === videoID,
-    )[0];
+  async details(
+    authorName: string | undefined,
+    videoID: string,
+  ): Promise<AdaptedItemDetails | undefined> {
+    // Fetch public details
+    const publicDetails = await this.fetchWebDetails(authorName, videoID);
+    if (publicDetails) return publicDetails;
 
-    if (internalDetails) return this.adaptInternal(internalDetails);
+    // Fetch internal details
+    // const internal = await this.fetchInternalDetailsApp(videoID);
+    // const internalDetails = internal?.aweme_list.filter(
+    //   (value) => value.aweme_id === videoID,
+    // )[0];
+    //
+    // if (internalDetails) return this.adaptInternal(internalDetails);
     return undefined;
   }
 
-  /**
-   * Parse the internal APIs aweme details into our
-   * generic format.
-   *
-   * @param details The aweme details
-   * @private Internal use only
-   */
-  private adaptInternal(details: Aweme): AdaptedItemDetails {
-    const videoPlayUrls = details?.video?.play_addr.url_list ?? [];
-    const audioPlayUrls = details?.music?.play_url.url_list ?? [];
-
-    const thumbnail =
-      details.image_post_info?.images[0]?.display_image?.url_list ||
-      details.video?.cover?.url_list ||
-      [];
-
-    // Adapt the data
-    return {
-      id: details.aweme_id,
-      video: {
-        url: videoPlayUrls[videoPlayUrls?.length - 1],
-        height: details.video?.play_addr.height ?? 1080,
-        width: details.video?.play_addr.width ?? 1920,
-      },
-      image: {
-        url: thumbnail[thumbnail?.length - 1],
-      },
-      audio: {
-        url: audioPlayUrls[audioPlayUrls?.length - 1],
-      },
-      author: {
-        username: details.author?.unique_id,
-      },
-      statistics: {
-        likes: details.statistics?.digg_count ?? 0,
-        comments: details.statistics?.comment_count ?? 0,
-      },
-      imagePost: details.image_post_info
-        ? {
-            images: details.image_post_info.images.map((image) => ({
-              url: image.display_image.url_list[
-                image.display_image.url_list.length - 1
-              ],
-              width: image.display_image.width,
-              height: image.display_image.height,
-            })),
-          }
-        : undefined,
-      src: {
-        type: "internal",
-        data: details,
-      },
-    };
+  async getSigiState(html: string): Promise<object | undefined> {
+    return searchJSON(
+      '<script[^>]+\\bid="(?:SIGI_STATE|sigi-persisted-data)"[^>]*>',
+      html,
+      "</script>",
+    );
   }
 
-  async internalDetails(
+  async getUniversalData(html: string): Promise<object | undefined> {
+    const json = searchJSON(
+      '<script[^>]+\\bid="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>',
+      html,
+      "</script>",
+    );
+
+    if (!json) return undefined;
+    return traverseJSON(json, ["__DEFAULT_SCOPE__"]);
+  }
+
+  async getNextJSData(html: string): Promise<object | undefined> {
+    return searchJSON(
+      "<script[^>]+id=[\\'\"]__NEXT_DATA__[\\'\"][^>]*>",
+      html,
+      "</script>",
+    );
+  }
+
+  async fetchWebDetails(
+    authorName: string | undefined,
+    videoID: string,
+  ): Promise<AdaptedItemDetails | undefined> {
+    const client = fetchCookie(fetch);
+
+    // Fetch HTML
+    const res = await client(
+      `https://tiktok.com/@${authorName || "_"}/video/${videoID}`,
+      {
+        headers: {
+          // Hello, it's me, a human! 🤖
+          "User-Agent": "Mozilla/5.0",
+        },
+        cf: {
+          cacheEverything: true,
+          cacheTtlByStatus: {
+            "200-299": 60 * 60,
+            "400-499": 5,
+            "500-599": 0,
+          },
+        },
+      },
+    );
+
+    // Is it Ok?
+    if (res.status !== 200) return undefined;
+
+    // Get HTML
+    const html = await res.text();
+
+    let status: number | undefined;
+    let videoData: PublicItemDetails | undefined;
+
+    const universalData = await this.getUniversalData(html);
+    const sigiData = await this.getSigiState(html);
+    const nextJSData = await this.getNextJSData(html);
+
+    if (universalData) {
+      status = traverseJSON<number>(
+        universalData,
+        ["webapp.video-detail", "statusCode"],
+        0,
+      );
+
+      videoData = traverseJSON<PublicItemDetails>(universalData, [
+        "webapp.video-detail",
+        "itemInfo",
+        "itemStruct",
+      ]);
+    } else if (sigiData) {
+      status = traverseJSON<number>(sigiData, ["VideoPage", "statusCode"], 0);
+      videoData = traverseJSON<PublicItemDetails>(sigiData, [
+        "ItemModule",
+        videoID,
+      ]);
+    } else if (nextJSData) {
+      status = traverseJSON<number>(
+        nextJSData,
+        ["props", "pageProps", "statusCode"],
+        0,
+      );
+
+      videoData = traverseJSON<PublicItemDetails>(nextJSData, [
+        "props",
+        "pageProps",
+        "itemInfo",
+        "itemStruct",
+      ]);
+    }
+
+    if (status === undefined || status !== 0 || !videoData) return undefined;
+    return this.adaptPublic(videoData);
+  }
+
+  async fetchInternalDetailsApp(
     videoID: string,
   ): Promise<InternalItemDetail | undefined> {
     // Throw if the video ID is not a number
@@ -206,6 +263,99 @@ class TikTokAPI {
 
     return undefined;
   }
+
+  /**
+   * Parse the public APIs item details into our
+   * generic format.
+   *
+   * @param item The item details
+   * @private Internal use only
+   */
+  private adaptPublic(item: PublicItemDetails): AdaptedItemDetails {
+    // Adapt the data
+    return {
+      id: item.id,
+      description: item.desc,
+      video: {
+        url: item.video.downloadAddr,
+        height: item.video.height,
+        width: item.video.width,
+      },
+      image: {
+        url: item.video.cover,
+      },
+      audio: {
+        url: item.music.playUrl,
+      },
+      author: {
+        username: item.author.uniqueId,
+      },
+      statistics: {
+        likes: item.stats.diggCount,
+        comments: item.stats.commentCount,
+      },
+      src: {
+        type: "public",
+        data: item,
+      },
+    };
+  }
+
+  /**
+   * Parse the internal APIs aweme details into our
+   * generic format.
+   *
+   * @param details The aweme details
+   * @private Internal use only
+   */
+  private adaptInternal(details: Aweme): AdaptedItemDetails {
+    const videoPlayUrls = details?.video?.play_addr.url_list ?? [];
+    const audioPlayUrls = details?.music?.play_url.url_list ?? [];
+
+    const thumbnail =
+      details.image_post_info?.images[0]?.display_image?.url_list ||
+      details.video?.cover?.url_list ||
+      [];
+
+    // Adapt the data
+    return {
+      id: details.aweme_id,
+      description: "", // TODO: Implement
+      video: {
+        url: videoPlayUrls[videoPlayUrls?.length - 1],
+        height: details.video?.play_addr.height ?? 1080,
+        width: details.video?.play_addr.width ?? 1920,
+      },
+      image: {
+        url: thumbnail[thumbnail?.length - 1],
+      },
+      audio: {
+        url: audioPlayUrls[audioPlayUrls?.length - 1],
+      },
+      author: {
+        username: details.author?.unique_id,
+      },
+      statistics: {
+        likes: details.statistics?.digg_count ?? 0,
+        comments: details.statistics?.comment_count ?? 0,
+      },
+      imagePost: details.image_post_info
+        ? {
+            images: details.image_post_info.images.map((image) => ({
+              url: image.display_image.url_list[
+                image.display_image.url_list.length - 1
+              ],
+              width: image.display_image.width,
+              height: image.display_image.height,
+            })),
+          }
+        : undefined,
+      src: {
+        type: "internal",
+        data: details,
+      },
+    };
+  }
 }
 
 /**
@@ -253,6 +403,34 @@ export interface AssetDetail {
 
 //endregion
 
+//region Public TikTok API
+export interface PublicItemDetails {
+  id: string;
+  desc: string;
+  author: {
+    avatarThumb: string;
+    uniqueId: string;
+  };
+  stats: {
+    commentCount: number;
+    diggCount: number;
+    playCount: number;
+    shareCount: number;
+  };
+  video: {
+    downloadAddr: string;
+    cover: string;
+    format: string;
+    height: number;
+    width: number;
+  };
+  music: {
+    playUrl: string;
+  };
+}
+
+//endregion
+
 /**
  * Adapted TikTok API
  */
@@ -265,6 +443,7 @@ export interface MediaSource {
 
 export interface AdaptedItemDetails {
   id: string;
+  description: string;
 
   video: MediaSource;
   image: MediaSource;
@@ -283,10 +462,15 @@ export interface AdaptedItemDetails {
     images: MediaSource[];
   };
 
-  src: {
-    type: "internal";
-    data: Aweme;
-  };
+  src:
+    | {
+        type: "internal";
+        data: Aweme;
+      }
+    | {
+        type: "public";
+        data: PublicItemDetails;
+      };
 }
 
 //endregion
