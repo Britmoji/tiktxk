@@ -62,14 +62,11 @@ const VideoPreview = ({ tiktok }: { tiktok: AdaptedItemDetails }) => (
   <Fragment>
     <meta
       property="og:video"
-      content={`${Constants.HOST_URL}/meta/${tiktok.author.username}/${tiktok.id}/video`}
+      content={`${Constants.HOST_URL}/meta/${tiktok.id}/video`}
     />
     <meta property="og:video:type" content={`video/mp4`} />
-    <meta property="og:video:width" content={tiktok.video.width?.toString()} />
-    <meta
-      property="og:video:height"
-      content={tiktok.video.height?.toString()}
-    />
+    <meta property="og:video:width" content={"1080"} />
+    <meta property="og:video:height" content={"1920"} />
     <meta property="og:type" content="video.other" />
   </Fragment>
 );
@@ -118,14 +115,13 @@ export const addTikTokRoutes = (app: Hono<{ Bindings: Bindings }>) => {
 
   // E.g. https://www.tiktok.com/@username/video/1234567891234567891
   const handleUsernameVideo: Handler = async (c) => {
-    const username = c.req.param("username").substring(1); // includes @
     const videoId = c.req.param("videoId");
 
     // Lookup details
-    const details = await tiktok.details(username, videoId);
+    const details = await tiktok.context(videoId);
     if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
-    return render(c, details);
+    return render(c, details.data);
   };
 
   // E.g. https://www.tiktok.com/t/ZTRav7308
@@ -144,21 +140,18 @@ export const addTikTokRoutes = (app: Hono<{ Bindings: Bindings }>) => {
       }
 
       // Lookup details
-      const details = await tiktok.details(
-        match.groups?.username,
-        match.groups?.id,
-      );
+      const details = await tiktok.context(match.groups?.id);
 
       if (!details) {
         throw new StatusError(404, "UNKNOWN_AWEME");
       }
 
-      return render(c, details);
+      return render(c, details.data);
     };
 
   // https://www.tiktok.com/@username/video/1234567891234567891
-  app.get("/:username/video/:videoId", handleUsernameVideo);
-  app.get("/:username/video/:videoId/", handleUsernameVideo);
+  app.get("/*/video/:videoId", handleUsernameVideo);
+  app.get("/*/video/:videoId/", handleUsernameVideo);
 
   // https://vm.tiktok.com/ZTRav7308/
   app.get("/:vmId", handleRedirect("vmId"));

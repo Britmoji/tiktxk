@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { respondDiscord } from "@/util/discord";
-import { getBaseURL } from "@/util/http";
 import { Bindings } from "@/types/cloudflare";
 
 export const addIndexRoutes = (app: Hono<{ Bindings: Bindings }>) => {

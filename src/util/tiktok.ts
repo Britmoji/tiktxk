@@ -19,22 +19,23 @@
 import { randomBigInt, randomInt } from "@/util/math";
 import { v4 as uuidv4 } from "uuid";
 import { searchJSON, traverseJSON } from "@/util/data";
-import fetchCookie from "fetch-cookie";
+import { get } from "@/util/http";
+import {
+  Cookie,
+  parse as parseCookies,
+  splitCookiesString,
+} from "set-cookie-parser";
 
 class TikTokAPI {
   /**
    * Fetch the item details of a public TikTok, either from the
    * internal API, or fallback to the public API.
    *
-   * @param authorName The author name
    * @param videoID The video ID
    */
-  async details(
-    authorName: string | undefined,
-    videoID: string,
-  ): Promise<AdaptedItemDetails | undefined> {
+  async context(videoID: string): Promise<TikTokContext | undefined> {
     // Fetch public details
-    const publicDetails = await this.fetchWebDetails(authorName, videoID);
+    const publicDetails = await this.fetchWebDetails(videoID);
     if (publicDetails) return publicDetails;
 
     // Fetch internal details
@@ -74,30 +75,9 @@ class TikTokAPI {
     );
   }
 
-  async fetchWebDetails(
-    authorName: string | undefined,
-    videoID: string,
-  ): Promise<AdaptedItemDetails | undefined> {
-    const client = fetchCookie(fetch);
-
+  async fetchWebDetails(videoID: string): Promise<TikTokContext | undefined> {
     // Fetch HTML
-    const res = await client(
-      `https://tiktok.com/@${authorName || "_"}/video/${videoID}`,
-      {
-        headers: {
-          // Hello, it's me, a human! 🤖
-          "User-Agent": "Mozilla/5.0",
-        },
-        cf: {
-          cacheEverything: true,
-          cacheTtlByStatus: {
-            "200-299": 60 * 60,
-            "400-499": 5,
-            "500-599": 0,
-          },
-        },
-      },
-    );
+    const res = await get(`https://tiktok.com/@/video/${videoID}`);
 
     // Is it Ok?
     if (res.status !== 200) return undefined;
@@ -146,7 +126,13 @@ class TikTokAPI {
     }
 
     if (status === undefined || status !== 0 || !videoData) return undefined;
-    return this.adaptPublic(videoData);
+
+    return {
+      cookies: parseCookies(
+        splitCookiesString(res.headers.get("set-cookie") ?? ""),
+      ),
+      data: this.adaptPublic(videoData),
+    };
   }
 
   async fetchInternalDetailsApp(
@@ -473,6 +459,10 @@ export interface AdaptedItemDetails {
       };
 }
 
+export interface TikTokContext {
+  cookies: Cookie[];
+  data: AdaptedItemDetails;
+}
 //endregion
 
 export const tiktok = new TikTokAPI();

@@ -19,11 +19,21 @@
 import { Context } from "hono";
 
 // I am not a 🤖
+export const USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36";
+
 export const get = async (url: string) => {
   return await fetch(url, {
     headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
+      "User-Agent": USER_AGENT,
+    },
+    cf: {
+      cacheEverything: true,
+      cacheTtlByStatus: {
+        "200-299": 60 * 60,
+        "400-499": 5,
+        "500-599": 0,
+      },
     },
   });
 };

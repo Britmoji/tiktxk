@@ -17,52 +17,65 @@
  */
 
 import { Hono } from "hono";
-import { tiktok } from "@/util/tiktok";
+import { tiktok, TikTokContext } from "@/util/tiktok";
 import { Bindings, StatusError } from "@/types/cloudflare";
+import { USER_AGENT } from "@/util/http";
 
 export const addMetaRoutes = (app: Hono<{ Bindings: Bindings }>) => {
   // Video metadata
-  app.get("/meta/:authorName/:videoId/video", async (c) => {
-    const authorName = c.req.param("authorName");
+  app.get("/meta/:videoId/video", async (c) => {
     const videoId = c.req.param("videoId");
-    const details = await tiktok.details(authorName, videoId);
-    if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
+    const ctx = await tiktok.context(videoId);
+    if (!ctx) throw new StatusError(404, "UNKNOWN_AWEME");
 
-    return c.redirect(details.video.url);
+    return fetchWithCtx(ctx.data.video.url, ctx);
   });
 
   // Image metadata
-  app.get("/meta/:authorName/:videoId/image/:index", async (c) => {
-    const authorName = c.req.param("authorName");
+  app.get("/meta/:videoId/image/:index", async (c) => {
     const videoId = c.req.param("videoId");
     const index = parseInt(c.req.param("index")) || 0;
-    const details = await tiktok.details(authorName, videoId);
-    if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
+    const ctx = await tiktok.context(videoId);
+    if (!ctx) throw new StatusError(404, "UNKNOWN_AWEME");
 
-    if (details.imagePost?.images?.length) {
-      return c.redirect(details.imagePost.images[index].url);
-    }
-
-    return c.redirect(details.image.url);
+    const url = ctx.data.imagePost?.images[index].url ?? ctx.data.image.url;
+    return fetchWithCtx(url, ctx);
   });
 
   // Audio metadata
-  app.get("/meta/:authorName/:videoId/audio", async (c) => {
-    const authorName = c.req.param("authorName");
+  app.get("/meta/:videoId/audio", async (c) => {
     const videoId = c.req.param("videoId");
-    const details = await tiktok.details(authorName, videoId);
-    if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
+    const ctx = await tiktok.context(videoId);
+    if (!ctx) throw new StatusError(404, "UNKNOWN_AWEME");
 
-    return c.redirect(details.audio.url);
+    return fetchWithCtx(ctx.data.audio.url, ctx);
   });
 
   // All metadata
-  app.get("/meta/:authorName/:videoId", async (c) => {
-    const authorName = c.req.param("authorName");
+  app.get("/meta/:videoId", async (c) => {
     const videoId = c.req.param("videoId");
-    const details = await tiktok.details(authorName, videoId);
+    const details = await tiktok.context(videoId);
     if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
     return c.json(details);
   });
+};
+
+const fetchWithCtx = async (url: string, context: TikTokContext) => {
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": USER_AGENT,
+      Cookie: context.cookies.map((c) => `${c.name}=${c.value}`).join("; "),
+    },
+    cf: {
+      cacheEverything: true,
+      cacheTtlByStatus: {
+        "200-299": 60 * 60,
+        "400-499": 5,
+        "500-599": 0,
+      },
+    },
+  });
+
+  return new Response(res.body, res);
 };

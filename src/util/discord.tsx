@@ -44,7 +44,6 @@ export const GenericDiscordEmbed: FC<DiscordEmbedData> = (
   const url = new URL(`${Constants.HOST_URL}/internal/embed`);
   url.searchParams.set("authorName", authorName);
   url.searchParams.set("authorUrl", authorUrl);
-  console.log(embed);
 
   // noinspection HtmlRequiredTitleElement
   return (
