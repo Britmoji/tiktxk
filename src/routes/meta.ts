@@ -19,6 +19,7 @@
 import { Hono } from "hono";
 import { tiktok } from "@/util/tiktok";
 import { Bindings, StatusError } from "@/types/cloudflare";
+import { get } from "@/util/http";
 
 export const addMetaRoutes = (app: Hono<{ Bindings: Bindings }>) => {
   // Video metadata
@@ -27,7 +28,8 @@ export const addMetaRoutes = (app: Hono<{ Bindings: Bindings }>) => {
     const details = await tiktok.details(videoId);
     if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
-    return c.redirect(details.video.url);
+    const v = await get(details.video.url);
+    return new Response(v.body, v);
   });
 
   // Image metadata
@@ -41,7 +43,8 @@ export const addMetaRoutes = (app: Hono<{ Bindings: Bindings }>) => {
       return c.redirect(details.imagePost.images[index].url);
     }
 
-    return c.redirect(details.image.url);
+    const i = await get(details.image.url);
+    return new Response(i.body, i);
   });
 
   // Audio metadata
@@ -50,7 +53,8 @@ export const addMetaRoutes = (app: Hono<{ Bindings: Bindings }>) => {
     const details = await tiktok.details(videoId);
     if (!details) throw new StatusError(404, "UNKNOWN_AWEME");
 
-    return c.redirect(details.audio.url);
+    const a = await get(details.audio.url);
+    return new Response(a.body, a);
   });
 
   // All metadata
